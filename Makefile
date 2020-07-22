@@ -2,7 +2,7 @@ ifndef VULKAN_SDK_PATH
 $(error $(VULKAN_SDK_PATH) Not defined. Source setup.sh)
 endif
 
-CFLAGS = -std=c++17 -I$(VULKAN_SDK_PATH)/include -Ilib/headerlibrarys -g
+CFLAGS = -std=c++17 -I$(VULKAN_SDK_PATH)/include -Ilib/vendor -g
 LDFLAGS = -L$(VULKAN_SDK_PATH)/lib `pkg-config --static --libs glfw3` -lvulkan
 
 VulkanTest: src/main.cpp src/VulkanUtil.cpp src/VulkanUtil.hpp
