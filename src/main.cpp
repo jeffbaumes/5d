@@ -47,6 +47,8 @@ class App {
 
     std::vector<uint32_t> indices;
 
+    bool cursorLocked = false;
+
     bool framebufferResized = false;
 
     void initWindow() {
@@ -58,6 +60,8 @@ class App {
         glfwSetWindowUserPointer(window, this);
         glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
         glfwSetKeyCallback(window, keyCallback);
+        glfwSetMouseButtonCallback(window, mouseButtonCallback);
+        glfwSetCursorPosCallback(window, cursorPositionCallback);
     }
 
     void initVulkan() {
@@ -68,6 +72,27 @@ class App {
         auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
         app->vulkan.framebufferResized = true;
     }
+
+    static void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+        auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            app->cursorLocked = true;
+        }
+    }
+
+    double lastX = 0;
+    double lastY = 0;
+
+    static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
+        auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
+        if (app->cursorLocked) {
+            app->swivel(xpos - app->lastX, ypos - app->lastY);
+            app->lastX = xpos;
+            app->lastY = ypos;
+        }
+    }
+
 
     static void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
         auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
@@ -84,6 +109,9 @@ class App {
                 app->holdingJump = true;
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
                 app->uvTravel = true;
+            } else if (key == GLFW_KEY_ESCAPE) {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                app->cursorLocked = false;
             }
         } else if (action == GLFW_RELEASE) {
             if (key == GLFW_KEY_W) {
