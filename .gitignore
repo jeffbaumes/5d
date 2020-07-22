@@ -4,3 +4,5 @@ vulkan
 VulkanTest
 
 *.spv
+
+.env_vars
