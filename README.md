@@ -16,3 +16,6 @@ to
 ```
 { BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 0 }
 ```
+
+Until someone finishes [clang-format dangling parentheses](https://reviews.llvm.org/D33029)
+we will stick with long lines.

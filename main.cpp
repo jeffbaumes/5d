@@ -217,11 +217,46 @@ class HelloTriangleApplication {
         window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
         glfwSetWindowUserPointer(window, this);
         glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+        glfwSetKeyCallback(window, keyCallback);
     }
 
     static void framebufferResizeCallback(GLFWwindow *window, int width, int height) {
         auto app = reinterpret_cast<HelloTriangleApplication *>(glfwGetWindowUserPointer(window));
         app->framebufferResized = true;
+    }
+
+    static void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+        auto app = reinterpret_cast<HelloTriangleApplication *>(glfwGetWindowUserPointer(window));
+        if (action == GLFW_PRESS) {
+            if (key == GLFW_KEY_W) {
+                app->forwardVel = app->walkVel;
+            } else if (key == GLFW_KEY_S) {
+                app->backVel = app->walkVel;
+            } else if (key == GLFW_KEY_D) {
+                app->rightVel = app->walkVel;
+            } else if (key == GLFW_KEY_A) {
+                app->leftVel = app->walkVel;
+            } else if (key == GLFW_KEY_SPACE) {
+                app->holdingJump = true;
+            } else if (key == GLFW_KEY_LEFT_SHIFT) {
+                app->uvTravel = true;
+            }
+        } else if (action == GLFW_RELEASE) {
+            if (key == GLFW_KEY_W) {
+                app->forwardVel = 0.0f;
+            } else if (key == GLFW_KEY_S) {
+                app->backVel = 0.0f;
+            } else if (key == GLFW_KEY_D) {
+                app->rightVel = 0.0f;
+            } else if (key == GLFW_KEY_A) {
+                app->leftVel = 0.0f;
+            } else if (key == GLFW_KEY_SPACE) {
+                app->holdingJump = false;
+                app->upVel = 0.0f;
+            } else if (key == GLFW_KEY_LEFT_SHIFT) {
+                app->uvTravel = false;
+            }
+        }
     }
 
     void initVulkan() {
@@ -1162,47 +1197,6 @@ class HelloTriangleApplication {
     }
 
     void generateCube(int x, int y, int z, int u, int v, std::unordered_map<Vertex, uint32_t> &uniqueVertices) {
-        // addVertex({{x + 0, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 1, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-
-        // addVertex({{x + 0, y + 0, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 0, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 0, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-
-        // addVertex({{x + 0, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 1, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 0, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-
-        // addVertex({{x + 1, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 0, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-
-        // addVertex({{x + 0, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 0, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 0, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 0, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 0, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-
-        // addVertex({{x + 0, y + 1, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 1, z + 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 0, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        // addVertex({{x + 1, y + 1, z + 1}, {x, y, z}, {u, v}}, uniqueVertices);
 
         addVertex({{0, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
         addVertex({{1, 1, 0}, {x, y, z}, {u, v}}, uniqueVertices);
@@ -1256,8 +1250,9 @@ class HelloTriangleApplication {
                     for (int u = -size / 2; u < size / 2; u += 1) {
                         for (int v = -size / 2; v < size / 2; v += 1) {
                             // if (x * x + y * y + z * z + u * u + v * v < (size / 2) * (size / 2))
-                            int s = size / 4;
-                            if (x <= s && x >= -s && y <= s && y >= -s && z <= s && z >= -s && u <= s && u >= -s && v <= s && v >= -s) {
+                            // int s = size / 4;
+                            // if (x <= s && x >= -s && y <= s && y >= -s && z <= s && z >= -s && u <= s && u >= -s && v <= s && v >= -s) {
+                            if (y <= 0) {
                                 generateCube(x, y, z, u, v, uniqueVertices);
                             }
                         }
@@ -1543,16 +1538,102 @@ class HelloTriangleApplication {
         }
     }
 
+    // Player stuff
+    float forwardVel = 0.0f;
+    float backVel = 0.0f;
+    float upVel = 0.0f;
+    float downVel = 0.0f;
+    float leftVel = 0.0f;
+    float rightVel = 0.0f;
+    bool uvTravel = false;
+    float fallVel = 0.0f;
+    float walkVel = 5.0f;
+    glm::vec3 loc = glm::vec3(0.0f, 2.0f, 0.0f);
+    glm::vec3 lookHeading = glm::vec3(1.0f, 0.0f, 0.0f);
+    float lookAltitude = 0.0f;
+    float height = 2.0f;
+    float radius = 0.25f;
+    bool holdingJump = false;
+    bool inJump = false;
+
+    glm::vec3 project(glm::vec3 a, glm::vec3 b) {
+        glm::vec3 bn = glm::normalize(b);
+        return bn * glm::dot(a, bn);
+    }
+
+    // ProjectToPlane projects a vector onto a plane with a given normal
+    glm::vec3 projectToPlane(glm::vec3 v, glm::vec3 n) {
+        if (glm::length(v) == 0) {
+            return v;
+        }
+        // To project vector to plane, subtract vector projected to normal
+        return v - project(v, n);
+    }
+
+    glm::vec3 lookDir() {
+        glm::vec3 up(0.0f, 1.0f, 0.0f);
+        // std::cout << lookHeading.x << "," << lookHeading.y << "," << lookHeading.z << std::endl;
+        lookHeading = glm::normalize(projectToPlane(lookHeading, up));
+        glm::vec3 right = glm::cross(lookHeading, up);
+        return glm::rotate(glm::mat4(1.0f), glm::radians(lookAltitude - 90.0f), right) * glm::vec4(up, 1.0f);
+    }
+
+    void swivel(float deltaX, float deltaY) {
+        float lookHeadingDelta = -0.1f * deltaX;
+        glm::vec3 normalDir(0.0f, 1.0f, 0.0f);
+        lookHeading = glm::rotate(glm::mat4(1.0f), glm::radians(lookHeadingDelta), normalDir) * glm::vec4(lookHeading, 1.0f);
+        lookAltitude = lookAltitude - 0.1f * deltaY;
+    }
+
+    void updatePosition(float time) {
+        glm::vec3 up(0.0f, 1.0f, 0.0f);
+        glm::vec3 right = glm::cross(lookHeading, up);
+        glm::vec3 feet = loc - (up * height);
+        // Cell feetCell = cartesianToCell(feet);
+        // bool falling = feetCell.material == 0;
+        bool falling = feet.y > 0.0f;
+        if (falling) {
+            fallVel -= 20.0f * time;
+        } else if (holdingJump && !inJump) {
+            fallVel = 7.0f;
+            inJump = true;
+        } else {
+            fallVel = 0.0f;
+            inJump = false;
+        }
+
+        glm::vec3 playerVel = up * fallVel;
+        playerVel = playerVel + lookHeading * (forwardVel - backVel);
+        playerVel = playerVel + right * (rightVel - leftVel);
+        std::cout << playerVel.x << "," << playerVel.y << "," << playerVel.z << std::endl;
+        std::cout << time;
+        loc = loc + (playerVel * time);
+
+        // TODO: Update focused cell here
+    }
+
+    std::chrono::steady_clock::time_point lastTime;
+
     void updateUniformBuffer(uint32_t currentImage) {
         static auto startTime = std::chrono::high_resolution_clock::now();
 
         auto currentTime = std::chrono::high_resolution_clock::now();
         float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        float timeDelta = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
+        lastTime = currentTime;
+
+        std::cerr << timeDelta << std::endl;
+
+        updatePosition(timeDelta);
 
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f) / 4.0f, glm::vec3(0.0f, 0.0f, 1.0f));
         // ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        // ubo.view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        // std::cout << loc.x << "," << loc.y << "," << loc.z << std::endl;
+        glm::vec3 look = lookDir();
+        // std::cout << look.x << "," << look.y << "," << look.z << std::endl;
+        ubo.view = glm::lookAt(loc, loc + look, glm::vec3(0.0f, 1.0f, 0.0f));
         // ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
         ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 50.0f);
         ubo.proj[1][1] *= -1;

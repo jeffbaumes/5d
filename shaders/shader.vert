@@ -18,20 +18,21 @@ layout(location = 1) out vec2 fragTexCoord;
 void main() {
     vec2 uv = ubo.uv;
     vec2 uvFloor = floor(uv);
-    vec2 frac = 1.0 - (uv - uvFloor);
-    vec3 pos = vec3(1000000.0, 0.0, inPosition.z);
+    vec2 uvFrac = 1.0 - (uv - uvFloor);
+    vec3 frac = vec3(uvFrac.x, 0.0, uvFrac.y);
+    vec3 pos = vec3(1000000.0, inPosition.y, 0.0);
     if (inUV == uvFloor) {
         pos.x = inPosition.x * frac.x;
-        pos.y = inPosition.y * frac.y;
+        pos.z = inPosition.z * frac.z;
     } else if (inUV == uvFloor + vec2(1.0, 0.0)) {
         pos.x = frac.x + inPosition.x * (1.0 - frac.x);
-        pos.y = inPosition.y * frac.y;
+        pos.z = inPosition.z * frac.z;
     } else if (inUV == uvFloor + vec2(0.0, 1.0)) {
         pos.x = inPosition.x * frac.x;
-        pos.y = frac.y + inPosition.y * (1.0 - frac.y);
+        pos.z = frac.z + inPosition.z * (1.0 - frac.z);
     } else if (inUV == uvFloor + vec2(1.0, 1.0)) {
         pos.x = frac.x + inPosition.x * (1.0 - frac.x);
-        pos.y = frac.y + inPosition.y * (1.0 - frac.y);
+        pos.z = frac.z + inPosition.z * (1.0 - frac.z);
     }
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(pos + inXYZ, 1.0);
     fragColor = 0.5 * (inXYZ + 4.0) / 8.0 + 0.5 * vec3((inUV + 4.0)/ 8.0, 1.0) - 0.25 * inPosition;
