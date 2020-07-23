@@ -134,7 +134,7 @@ void VulkanUtil::initVulkan() {
     createInstance();
     setupDebugMessenger();
     // createSurface();
-    
+
     // loadModel();
 }
 
@@ -159,8 +159,6 @@ void VulkanUtil::initSurface(VkSurfaceKHR surface) {
 void VulkanUtil::setVerticesAndIndices(std::vector<Vertex> vertices, std::vector<uint32_t> indices) {
     this->vertices = vertices;
     this->indices = indices;
-
-    std::cout << indices.size() << std::endl;
 
     createVertexBuffer();
     createIndexBuffer();
@@ -259,8 +257,6 @@ void VulkanUtil::createInstance() {
     if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
     }
-
-    printf("Created!\n");
 }
 
 void VulkanUtil::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo) {
