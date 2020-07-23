@@ -48,6 +48,7 @@ class App {
     std::vector<uint32_t> indices;
 
     bool cursorLocked = false;
+    bool firstMousePosition = true;
 
     bool framebufferResized = false;
 
@@ -78,6 +79,7 @@ class App {
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             app->cursorLocked = true;
+            app->firstMousePosition = true;
         }
     }
 
@@ -87,6 +89,11 @@ class App {
     static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
         auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
         if (app->cursorLocked) {
+            if (app->firstMousePosition) {
+                app->lastX = xpos;
+                app->lastY = ypos;
+                app->firstMousePosition = false;
+            }
             app->swivel(xpos - app->lastX, ypos - app->lastY);
             app->lastX = xpos;
             app->lastY = ypos;
@@ -265,7 +272,6 @@ class App {
 
     glm::vec3 lookDir() {
         glm::vec3 up(0.0f, 1.0f, 0.0f);
-        // std::cout << lookHeading.x << "," << lookHeading.y << "," << lookHeading.z << std::endl;
         lookHeading = glm::normalize(projectToPlane(lookHeading, up));
         glm::vec3 right = glm::cross(lookHeading, up);
         return glm::rotate(glm::mat4(1.0f), glm::radians(lookAltitude - 90.0f), right) * glm::vec4(up, 1.0f);
@@ -298,14 +304,12 @@ class App {
         glm::vec3 playerVel = up * fallVel;
         playerVel = playerVel + lookHeading * (forwardVel - backVel);
         playerVel = playerVel + right * (rightVel - leftVel);
-        std::cout << playerVel.x << "," << playerVel.y << "," << playerVel.z << std::endl;
-        std::cout << time;
         loc = loc + (playerVel * time);
 
         // TODO: Update focused cell here
     }
 
-    std::chrono::system_clock::time_point lastTime;
+    std::chrono::high_resolution_clock::time_point lastTime;
 
     void updateUniforms() {
         static auto startTime = std::chrono::high_resolution_clock::now();
@@ -315,19 +319,12 @@ class App {
         float timeDelta = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
         lastTime = currentTime;
 
-        std::cerr << timeDelta << std::endl;
-
         updatePosition(timeDelta);
 
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f) / 4.0f, glm::vec3(0.0f, 0.0f, 1.0f));
-        // ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        // ubo.view = glm::lookAt(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        // std::cout << loc.x << "," << loc.y << "," << loc.z << std::endl;
         glm::vec3 look = lookDir();
-        // std::cout << look.x << "," << look.y << "," << look.z << std::endl;
         ubo.view = glm::lookAt(loc, loc + look, glm::vec3(0.0f, 1.0f, 0.0f));
-        // ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
         ubo.proj = glm::perspective(glm::radians(45.0f), vulkan.swapChainExtent.width / (float)vulkan.swapChainExtent.height, 0.1f, 50.0f);
         ubo.proj[1][1] *= -1;
 
