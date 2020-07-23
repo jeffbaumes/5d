@@ -138,7 +138,17 @@ class App {
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
                 app->uvTravel = false;
                 glm::vec2 uvDist = app->uv - app->oldUv;
-                app->uv = glm::floor(app->oldUv) + glm::floor(uvDist);
+                if (uvDist.x < 0) {
+                    app->uv.x = ceil(app->uv.x);
+                } else {
+                    app->uv.x = floor(app->uv.x);
+                }
+
+                if (uvDist.y < 0) {
+                    app->uv.y = ceil(app->uv.y);
+                } else {
+                    app->uv.y = floor(app->uv.y);
+                }
             }
         }
     }
