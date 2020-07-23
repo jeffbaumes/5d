@@ -249,6 +249,7 @@ class App {
     float fallVel = 0.0f;
     float walkVel = 5.0f;
     glm::vec3 loc = glm::vec3(0.0f, 2.0f, 0.0f);
+    glm::vec2 uv = glm::vec2(0.0f, 0.0f);
     glm::vec3 lookHeading = glm::vec3(1.0f, 0.0f, 0.0f);
     float lookAltitude = 0.0f;
     float height = 2.0f;
@@ -304,7 +305,12 @@ class App {
         glm::vec3 playerVel = up * fallVel;
         playerVel = playerVel + lookHeading * (forwardVel - backVel);
         playerVel = playerVel + right * (rightVel - leftVel);
-        loc = loc + (playerVel * time);
+        if (uvTravel) {
+            uv = uv + (glm::vec2(playerVel.x, playerVel.z) * time);
+            loc.y = loc.y + (playerVel.y * time);
+        } else {
+            loc = loc + (playerVel * time);
+        }
 
         // TODO: Update focused cell here
     }
@@ -328,7 +334,7 @@ class App {
         ubo.proj = glm::perspective(glm::radians(45.0f), vulkan.swapChainExtent.width / (float)vulkan.swapChainExtent.height, 0.1f, 50.0f);
         ubo.proj[1][1] *= -1;
 
-        ubo.uv = glm::vec2(2.0f * glm::sin(time / 4.0f), 2.0f * glm::sin(time / 4.0f));
+        ubo.uv = uv;
 
         vulkan.ubo = ubo;
     }
