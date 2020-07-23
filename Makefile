@@ -18,8 +18,14 @@ endif
 CFLAGS = -std=c++17 -I$(VULKAN_SDK_PATH)/include -Ilib/vendor -g
 LDFLAGS = -L$(VULKAN_SDK_PATH)/lib `pkg-config --static --libs glfw3` -lvulkan
 
-VulkanTest: src/main.cpp src/VulkanUtil.cpp src/VulkanUtil.hpp
+VulkanTest: src/main.cpp src/VulkanUtil.cpp src/VulkanUtil.hpp src/shaders/frag.spv src/shaders/vert.spv
 	g++ $(CFLAGS) -o VulkanTest src/main.cpp src/VulkanUtil.cpp $(LDFLAGS)
+
+src/shaders/frag.spv: src/shaders/shader.frag
+	$(VULKAN_SDK_PATH)/bin/glslc $< -o $@
+
+src/shaders/vert.spv: src/shaders/shader.vert
+	$(VULKAN_SDK_PATH)/bin/glslc $< -o $@
 
 .PHONY: test clean
 

@@ -118,6 +118,7 @@ class App {
                 app->holdingJump = true;
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
                 app->uvTravel = true;
+                app->oldUv = app->uv;
             } else if (key == GLFW_KEY_ESCAPE) {
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                 app->cursorLocked = false;
@@ -136,6 +137,8 @@ class App {
                 app->upVel = 0.0f;
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
                 app->uvTravel = false;
+                glm::vec2 uvDist = app->uv - app->oldUv;
+                app->uv = glm::floor(app->oldUv) + glm::floor(uvDist);
             }
         }
     }
@@ -249,8 +252,8 @@ class App {
                             // if (dx * dx + dy * dy + dz * dz + du * du + dv * dv < (size / 2) * (size / 2)) {
                             // int s = size / 4;
                             // if (x <= s && x >= -s && y <= s && y >= -s && z <= s && z >= -s && u <= s && u >= -s && v <= s && v >= -s) {
-                            if (y <= size / 2 || x == 0 || y == 0 || z == 0 || u == 0 || v == 0) {
-                            // if (x / 2 + y + z / 2 + u / 2 + v / 2 < 10) {
+                            // if (y <= size / 2 || x == 0 || y == 0 || z == 0 || u == 0 || v == 0) {
+                            if (x / 2 + y + z / 2 + u / 2 + v / 2 < 10) {
                                 generateCube(x, y, z, u, v, uniqueVertices);
                                 setCell(x, y, z, u, v, 1);
                             }
@@ -273,12 +276,13 @@ class App {
     bool uvTravel = false;
     float fallVel = 0.0f;
     float walkVel = 2.0f;
-    glm::vec3 loc = glm::vec3(size / 2, size / 2 + 3, size / 2);
+    glm::vec3 loc = glm::vec3(size / 2, size / 2 + 2, size / 2);
     glm::vec2 uv = glm::vec2(size / 2, size / 2);
     glm::vec3 lookHeading = glm::vec3(1.0f, 0.0f, 0.0f);
     float lookAltitude = 0.0f;
-    float height = 2.0f;
-    float radius = 0.25f;
+    float height = 1.0f;
+    float radius = 0.1f;
+    glm::vec2 oldUv = glm::vec2(size / 2, size / 2);
     bool holdingJump = false;
     bool inJump = false;
 
@@ -342,7 +346,9 @@ class App {
                     float move = radius - dist2Plane;
                     cNorm = cNorm * move;
                     if (u != 0 || v != 0) {
-                        uv = uv + glm::vec2(cNorm.x, cNorm.z);
+                        if (uvTravel) {
+                            uv = uv + glm::vec2(cNorm.x, cNorm.z);
+                        }
                         loc.y = loc.y + cNorm.y;
                     } else {
                         loc = loc + cNorm;
@@ -391,7 +397,11 @@ class App {
             collide(h, 0, 0, 0, 0, -1);
         }
 
+
         std::cout << loc.x << "," << loc.y << "," << loc.z << std::endl;
+        std::cout << oldUv.x << "," << oldUv.y << std::endl;
+        std::cout << uv.x << "," << uv.y << std::endl;
+
 
         // TODO: Update focused cell here
     }
