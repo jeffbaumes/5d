@@ -27,7 +27,7 @@
 #include <vector>
 
 const std::string MODEL_PATH = "src/assets/models/viking_room.obj";
-const std::string TEXTURE_PATH = "src/assets/textures/viking_room.png";
+const std::string TEXTURE_PATH = "src/assets/textures/grass.png";
 const std::string VERTEX_SHADER_PATH = "src/shaders/vert.spv";
 const std::string FRAG_SHADER_PATH = "src/shaders/frag.spv";
 
@@ -61,11 +61,12 @@ struct SwapChainSupportDetails {
 struct Vertex {
     glm::vec3 pos;
     glm::vec3 color;
+    glm::vec2 UV;
     glm::vec2 texCoord;
 
     static VkVertexInputBindingDescription getBindingDescription();
 
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
+    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions();
 
     bool operator==(const Vertex &other) const;
 };
