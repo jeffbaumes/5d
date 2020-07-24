@@ -45,6 +45,8 @@ class App {
 
     std::vector<int> cells;
 
+    std::vector<int> cubeIndexLocations;
+
     std::vector<Vertex> vertices;
 
     std::vector<uint32_t> indices;
@@ -86,16 +88,16 @@ class App {
             } else {
                 auto cell = app->focusedCell;
                 auto cellUV = app->focusedCellUV;
-                // app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, 1, true);
+                app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, 0, true);
             }
 
         }
 
         if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
             if (app->cursorLocked) {
-                auto cell = app->focusedCell;
-                auto cellUV = app->focusedCellUV;
-                app->setCell(cell.x, cell.y + 1, cell.z, cellUV.x, cellUV.y, 1, true);
+                auto cell = app->buildCell;
+                auto cellUV = app->buildCellUV;
+                app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, 1, true);
             }
 
         }
@@ -193,7 +195,7 @@ class App {
         vulkan.initSurface(surface);
     }
 
-    void addVertex(const Vertex &vertex) {
+    int addVertex(const Vertex &vertex) {
         static long vertexIndex = 0;
         static long indexIndex = 0;
         if (uniqueVertices.count(vertex) == 0) {
@@ -203,11 +205,12 @@ class App {
         }
         indices[indexIndex] = uniqueVertices[vertex];
         indexIndex += 1;
+        return indexIndex - 1;
     }
 
     void generateCube(int x, int y, int z, int u, int v) {
 
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}});
+        cubeIndexLocations[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = addVertex({{0, 0, 0}, {x, y, z}, {u, v}});
         addVertex({{1, 1, 0}, {x, y, z}, {u, v}});
         addVertex({{1, 0, 0}, {x, y, z}, {u, v}});
         addVertex({{0, 0, 0}, {x, y, z}, {u, v}});
@@ -248,6 +251,13 @@ class App {
         addVertex({{0, 1, 0}, {x, y, z}, {u, v}});
         addVertex({{0, 1, 1}, {x, y, z}, {u, v}});
         addVertex({{1, 1, 1}, {x, y, z}, {u, v}});
+    }
+
+    void removeCube(int x, int y, int z, int u, int v) {
+        int index = cubeIndexLocations[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v];
+        for (int x = index; x < index + 36; x++) {
+            indices[x] = 0;
+        }
     }
 
     void setCell(int x, int y, int z, int u, int v, int material, bool running) {
@@ -255,10 +265,11 @@ class App {
             return;
         }
         if (material == 0) {
-            // TODO: Delete cell
+            removeCube(x, y, z, u, v);
+        } else {
+            generateCube(x, y, z, u, v);
         }
 
-        generateCube(x, y, z, u, v);
 
         if (running) {
             vulkan.resetVerticesAndIndices(vertices, indices);
@@ -279,8 +290,14 @@ class App {
 
     void addWorldVertices() {
         cells.resize(size * size * size * size * size, 0);
+        cubeIndexLocations.resize(size * size * size * size * size, 0);
         vertices.resize(size * size * size * size * size * 20, {{0, 0, 0}, {0, 0, 0}, {0, 0}});
         indices.resize(size * size * size * size * size * 36, 0);
+
+        // addVertex({{0, 0, 0}, {2147483647, 2147483647, 2147483647}, {0, 0}});
+        // addVertex({{0, 0, 0}, {2147483647, 2147483647, 2147483647}, {0, 0}});
+        // addVertex({{0, 0, 0}, {2147483647, 2147483647, 2147483647}, {0, 0}});
+
 
         for (int x = 0; x < size; x += 1) {
             for (int y = 0; y < size; y += 1) {
@@ -329,6 +346,8 @@ class App {
     bool inJump = false;
     glm::vec3 focusedCell = glm::vec3(0, 0, 0);
     glm::vec2 focusedCellUV = glm::vec2(0, 0);
+    glm::vec3 buildCell = glm::vec3(0, 0, 0);
+    glm::vec2 buildCellUV = glm::vec2(0, 0);
 
 
     glm::vec3 project(glm::vec3 a, glm::vec3 b) {
@@ -454,6 +473,8 @@ class App {
         glm::vec3 pos = loc;
         focusedCell = glm::vec3(0, 0, 0);
         focusedCellUV = glm::vec2(0, 0);
+        glm::vec3 prevCell = glm::vec3(0, 0, 0);
+        glm::vec2 prevCellUV = glm::vec2(0, 0);
         for (int i = 0; i < 100; i++) {
             pos = pos + increment;
             glm::vec3 floorpos = glm::floor(pos);
@@ -461,8 +482,12 @@ class App {
             if (cell != 0) {
                 focusedCell = floorpos;
                 focusedCellUV = glm::floor(uv);
+                buildCell = prevCell;
+                buildCellUV = prevCellUV;
                 break;
             }
+            prevCell = floorpos;
+            prevCellUV = glm::floor(uv);
 	    }
 
         // std::cout << focusedCell.x << "," << focusedCell.y << "," << focusedCell.z << "," << focusedCellUV.x << "," << focusedCellUV.y << std::endl;
