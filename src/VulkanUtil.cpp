@@ -160,13 +160,21 @@ void VulkanUtil::setVerticesAndIndices(std::vector<Vertex> vertices, std::vector
     this->vertices = vertices;
     this->indices = indices;
 
-    createVertexBuffer();
-    createIndexBuffer();
+    createVertexBuffer(false);
+    createIndexBuffer(false);
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
     createCommandBuffers();
     createSyncObjects();
+}
+
+void VulkanUtil::resetVerticesAndIndices(std::vector<Vertex> vertices, std::vector<uint32_t> indices) {
+    this->vertices = vertices;
+    this->indices = indices;
+
+    createVertexBuffer(true);
+    createIndexBuffer(true);
 }
 
 void VulkanUtil::cleanupSwapChain() {
@@ -1009,7 +1017,7 @@ void VulkanUtil::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
     endSingleTimeCommands(commandBuffer);
 }
 
-void VulkanUtil::createVertexBuffer() {
+void VulkanUtil::createVertexBuffer(bool update) {
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
     VkBuffer stagingBuffer;
@@ -1021,7 +1029,11 @@ void VulkanUtil::createVertexBuffer() {
     memcpy(data, vertices.data(), (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+    if (!update) {
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+    }
+
+    std::cout << "made buffer" << std::endl;
 
     copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
@@ -1029,7 +1041,7 @@ void VulkanUtil::createVertexBuffer() {
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void VulkanUtil::createIndexBuffer() {
+void VulkanUtil::createIndexBuffer(bool update) {
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     VkBuffer stagingBuffer;
@@ -1041,7 +1053,9 @@ void VulkanUtil::createIndexBuffer() {
     memcpy(data, indices.data(), (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+    if (!update) {
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+    }
 
     copyBuffer(stagingBuffer, indexBuffer, bufferSize);
 

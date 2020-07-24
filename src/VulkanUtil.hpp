@@ -42,7 +42,7 @@ const std::vector<const char *> deviceExtensions = {
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
-const bool enableValidationLayers = false;
+const bool enableValidationLayers = true;
 #endif
 
 struct QueueFamilyIndices {
@@ -82,7 +82,9 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
-    glm::vec2 uv;
+    alignas(16) glm::vec2 uv;
+    alignas(16) glm::vec3 selectedCell;
+    alignas(16) glm::vec2 selectedCellUV;
 };
 
 class VulkanUtil {
@@ -94,6 +96,8 @@ class VulkanUtil {
     void draw();
 
     void initSurface(VkSurfaceKHR surface);
+
+    void resetVerticesAndIndices(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
 
     void setVerticesAndIndices(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
 
@@ -228,9 +232,9 @@ class VulkanUtil {
 
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
-    void createVertexBuffer();
+    void createVertexBuffer(bool update);
 
-    void createIndexBuffer();
+    void createIndexBuffer(bool update);
 
     void createUniformBuffers();
 

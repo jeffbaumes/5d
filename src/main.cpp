@@ -79,9 +79,25 @@ class App {
     static void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
         auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            app->cursorLocked = true;
-            app->firstMousePosition = true;
+            if (!app->cursorLocked) {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                app->cursorLocked = true;
+                app->firstMousePosition = true;
+            } else {
+                auto cell = app->focusedCell;
+                auto cellUV = app->focusedCellUV;
+                // app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, 1, true);
+            }
+            
+        }
+
+        if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+            if (app->cursorLocked) {
+                auto cell = app->focusedCell;
+                auto cellUV = app->focusedCellUV;
+                app->setCell(cell.x, cell.y + 1, cell.z, cellUV.x, cellUV.y, 1, true);
+            }
+            
         }
     }
 
@@ -177,63 +193,84 @@ class App {
         vulkan.initSurface(surface);
     }
 
-    void addVertex(const Vertex &vertex, std::unordered_map<Vertex, uint32_t> &uniqueVertices) {
+    void addVertex(const Vertex &vertex) {
         if (uniqueVertices.count(vertex) == 0) {
             uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
             vertices.push_back(vertex);
         }
         indices.push_back(uniqueVertices[vertex]);
     }
+    // void addVertex(const Vertex &vertex) {
+    //     static long vertexIndex = 0;
+    //     static long indexIndex = 0;
+    //     if (uniqueVertices.count(vertex) == 0) {
+    //         uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+    //         vertices[vertexIndex] = vertex;
+    //         vertexIndex += 1;
+    //     }
+    //     indices[indexIndex] = uniqueVertices[vertex];
+    //     indexIndex += 1;
+    // }
 
-    void generateCube(int x, int y, int z, int u, int v, std::unordered_map<Vertex, uint32_t> &uniqueVertices) {
+    void generateCube(int x, int y, int z, int u, int v) {
 
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}}, uniqueVertices);
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{0, 1, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 0}, {x, y, z}, {u, v}});
 
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
+        addVertex({{0, 0, 1}, {x, y, z}, {u, v}});
+        addVertex({{1, 0, 1}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}});
+        addVertex({{0, 0, 1}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}});
+        addVertex({{0, 1, 1}, {x, y, z}, {u, v}});
 
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{0, 1, 1}, {x, y, z}, {u, v}});
+        addVertex({{0, 1, 0}, {x, y, z}, {u, v}});
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{0, 0, 1}, {x, y, z}, {u, v}});
+        addVertex({{0, 1, 1}, {x, y, z}, {u, v}});
 
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}}, uniqueVertices);
+        addVertex({{1, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}});
+        addVertex({{1, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}});
+        addVertex({{1, 0, 1}, {x, y, z}, {u, v}});
 
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}}, uniqueVertices);
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 0, 1}, {x, y, z}, {u, v}});
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 0, 1}, {x, y, z}, {u, v}});
+        addVertex({{0, 0, 1}, {x, y, z}, {u, v}});
 
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}}, uniqueVertices);
+        addVertex({{0, 1, 0}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 0}, {x, y, z}, {u, v}});
+        addVertex({{0, 1, 0}, {x, y, z}, {u, v}});
+        addVertex({{0, 1, 1}, {x, y, z}, {u, v}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}});
     }
 
-    void setCell(int x, int y, int z, int u, int v, int material) {
+    void setCell(int x, int y, int z, int u, int v, int material, bool running) {
         if (x < 0 || x >= size || y < 0 || y >= size || z < 0 || z >= size || u < 0 || u >= size || v < 0 || v >= size) {
             return;
         }
+        if (material == 0) {
+            // TODO: Delete cell
+        }
+
+        generateCube(x, y, z, u, v);
+
+        if (running) {
+            vulkan.resetVerticesAndIndices(vertices, indices);
+        }
+
         cells[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = material;
     }
 
@@ -245,10 +282,15 @@ class App {
     }
 
     int size = 8;
+    std::unordered_map<Vertex, uint32_t> uniqueVertices;
 
     void addWorldVertices() {
         cells.resize(size * size * size * size * size, 0);
-        std::unordered_map<Vertex, uint32_t> uniqueVertices;
+        vertices.resize(size * size * size * size * size * 20, {{0, 0, 0}, {0, 0, 0}, {0, 0}});
+        // vertices.reserve(size * size * size * size * size * 20);
+        // indices.reserve(size * size * size * size * size * 36);
+        indices.resize(size * size * size * size * size * 36, 0);
+
         for (int x = 0; x < size; x += 1) {
             for (int y = 0; y < size; y += 1) {
                 for (int z = 0; z < size; z += 1) {
@@ -262,10 +304,9 @@ class App {
                             // if (dx * dx + dy * dy + dz * dz + du * du + dv * dv < (size / 2) * (size / 2)) {
                             // int s = size / 4;
                             // if (x <= s && x >= -s && y <= s && y >= -s && z <= s && z >= -s && u <= s && u >= -s && v <= s && v >= -s) {
-                            // if (y <= size / 2 || x == 0 || y == 0 || z == 0 || u == 0 || v == 0) {
-                            if (x / 2 + y + z / 2 + u / 2 + v / 2 < 10) {
-                                generateCube(x, y, z, u, v, uniqueVertices);
-                                setCell(x, y, z, u, v, 1);
+                            if (y <= size / 2 || x == 0 || y == 0 || z == 0 || u == 0 || v == 0) {
+                            // if (x / 2 + y + z / 2 + u / 2 + v / 2 < 10) {
+                                setCell(x, y, z, u, v, 1, false);
                             }
                         }
                     }
@@ -295,6 +336,9 @@ class App {
     glm::vec2 oldUv = glm::vec2(size / 2, size / 2);
     bool holdingJump = false;
     bool inJump = false;
+    glm::vec3 focusedCell = glm::vec3(0, 0, 0);
+    glm::vec2 focusedCellUV = glm::vec2(0, 0);
+
 
     glm::vec3 project(glm::vec3 a, glm::vec3 b) {
         glm::vec3 bn = glm::normalize(b);
@@ -408,12 +452,30 @@ class App {
         }
 
 
-        std::cout << loc.x << "," << loc.y << "," << loc.z << std::endl;
-        std::cout << oldUv.x << "," << oldUv.y << std::endl;
-        std::cout << uv.x << "," << uv.y << std::endl;
+        // std::cout << loc.x << "," << loc.y << "," << loc.z << "," << uv.x << "," << uv.y << std::endl;
+        // std::cout << oldUv.x << "," << oldUv.y << std::endl;
+        // std::cout << uv.x << "," << uv.y << std::endl;
 
 
         // TODO: Update focused cell here
+        // glm::vec3 increment = lookDir() * glm::vec3(0.05, 1, 1);
+        glm::vec3 increment = lookDir() * glm::vec3(0.5, 0.5, 0.5);
+        glm::vec3 pos = loc;
+        focusedCell = glm::vec3(0, 0, 0);
+        focusedCellUV = glm::vec2(0, 0);
+        for (int i = 0; i < 100; i++) {
+            pos = pos + increment;
+            glm::vec3 floorpos = glm::floor(pos);
+            int cell = getCell(floorpos.x, floorpos.y, floorpos.z, floor(uv.x), floor(uv.y));
+            if (cell != 0) {
+                focusedCell = floorpos;
+                focusedCellUV = glm::floor(uv);
+                break;
+            }
+	    }
+
+        // std::cout << focusedCell.x << "," << focusedCell.y << "," << focusedCell.z << "," << focusedCellUV.x << "," << focusedCellUV.y << std::endl;
+
     }
 
     std::chrono::high_resolution_clock::time_point lastTime;
@@ -441,6 +503,9 @@ class App {
         ubo.proj[1][1] *= -1;
 
         ubo.uv = uv;
+
+        ubo.selectedCell = focusedCell;
+        ubo.selectedCellUV = focusedCellUV;
 
         vulkan.ubo = ubo;
     }

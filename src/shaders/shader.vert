@@ -6,6 +6,8 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
     vec2 uv;
+    vec3 selectedCell;
+    vec2 selectedCellUV;
 } ubo;
 
 layout(location = 0) in vec3 inPosition;
@@ -35,6 +37,11 @@ void main() {
         pos.z = frac.z + inPosition.z * (1.0 - frac.z);
     }
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(pos + inXYZ, 1.0);
-    fragColor = 0.5 * (inXYZ + 4.0) / 8.0 + 0.5 * vec3((inUV + 4.0)/ 8.0, 1.0) - 0.25 * inPosition;
+    if (floor(inXYZ) == ubo.selectedCell && floor(inUV) == ubo.selectedCellUV) {
+        fragColor = vec3(0.0, 1.0, 0.1);
+    } else {
+        fragColor = inXYZ / 8;
+        // fragColor = 0.5 * (inXYZ + 4.0) / 8.0 + 0.5 * vec3((inUV + 4.0)/ 8.0, 1.0) - 0.25 * inPosition;
+    }
     fragTexCoord = inUV;
 }
