@@ -88,7 +88,7 @@ class App {
                 auto cellUV = app->focusedCellUV;
                 // app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, 1, true);
             }
-            
+
         }
 
         if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
@@ -97,7 +97,7 @@ class App {
                 auto cellUV = app->focusedCellUV;
                 app->setCell(cell.x, cell.y + 1, cell.z, cellUV.x, cellUV.y, 1, true);
             }
-            
+
         }
     }
 
@@ -194,23 +194,16 @@ class App {
     }
 
     void addVertex(const Vertex &vertex) {
+        static long vertexIndex = 0;
+        static long indexIndex = 0;
         if (uniqueVertices.count(vertex) == 0) {
-            uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-            vertices.push_back(vertex);
+            uniqueVertices[vertex] = static_cast<uint32_t>(vertexIndex);
+            vertices[vertexIndex] = vertex;
+            vertexIndex += 1;
         }
-        indices.push_back(uniqueVertices[vertex]);
+        indices[indexIndex] = uniqueVertices[vertex];
+        indexIndex += 1;
     }
-    // void addVertex(const Vertex &vertex) {
-    //     static long vertexIndex = 0;
-    //     static long indexIndex = 0;
-    //     if (uniqueVertices.count(vertex) == 0) {
-    //         uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-    //         vertices[vertexIndex] = vertex;
-    //         vertexIndex += 1;
-    //     }
-    //     indices[indexIndex] = uniqueVertices[vertex];
-    //     indexIndex += 1;
-    // }
 
     void generateCube(int x, int y, int z, int u, int v) {
 
@@ -287,8 +280,6 @@ class App {
     void addWorldVertices() {
         cells.resize(size * size * size * size * size, 0);
         vertices.resize(size * size * size * size * size * 20, {{0, 0, 0}, {0, 0, 0}, {0, 0}});
-        // vertices.reserve(size * size * size * size * size * 20);
-        // indices.reserve(size * size * size * size * size * 36);
         indices.resize(size * size * size * size * size * 36, 0);
 
         for (int x = 0; x < size; x += 1) {
@@ -459,7 +450,7 @@ class App {
 
         // TODO: Update focused cell here
         // glm::vec3 increment = lookDir() * glm::vec3(0.05, 1, 1);
-        glm::vec3 increment = lookDir() * glm::vec3(0.5, 0.5, 0.5);
+        glm::vec3 increment = lookDir() * 0.05f;
         glm::vec3 pos = loc;
         focusedCell = glm::vec3(0, 0, 0);
         focusedCellUV = glm::vec2(0, 0);
@@ -499,7 +490,7 @@ class App {
         ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f) / 4.0f, glm::vec3(0.0f, 0.0f, 1.0f));
         glm::vec3 look = lookDir();
         ubo.view = glm::lookAt(loc, loc + look, glm::vec3(0.0f, 1.0f, 0.0f));
-        ubo.proj = glm::perspective(glm::radians(45.0f), vulkan.swapChainExtent.width / (float)vulkan.swapChainExtent.height, 0.1f, 50.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), vulkan.swapChainExtent.width / (float)vulkan.swapChainExtent.height, 0.02f, 50.0f);
         ubo.proj[1][1] *= -1;
 
         ubo.uv = uv;
