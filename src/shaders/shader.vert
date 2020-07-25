@@ -29,13 +29,13 @@ void main() {
     if (inUV == uvFloor) {
         pos.x = inPosition.x * frac.x;
         pos.z = inPosition.z * frac.z;
-    } else if (inUV == uvFloor + vec2(1.0, 0.0)) {
+    } else if (inUV == uvFloor + vec2(1.0, 0.0) && uv != uvFloor) {
         pos.x = frac.x + inPosition.x * (1.0 - frac.x);
         pos.z = inPosition.z * frac.z;
-    } else if (inUV == uvFloor + vec2(0.0, 1.0)) {
+    } else if (inUV == uvFloor + vec2(0.0, 1.0) && uv != uvFloor) {
         pos.x = inPosition.x * frac.x;
         pos.z = frac.z + inPosition.z * (1.0 - frac.z);
-    } else if (inUV == uvFloor + vec2(1.0, 1.0)) {
+    } else if (inUV == uvFloor + vec2(1.0, 1.0) && uv != uvFloor) {
         pos.x = frac.x + inPosition.x * (1.0 - frac.x);
         pos.z = frac.z + inPosition.z * (1.0 - frac.z);
     }
