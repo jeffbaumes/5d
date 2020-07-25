@@ -27,7 +27,7 @@
 #include <vector>
 
 const std::string MODEL_PATH = "src/assets/models/viking_room.obj";
-const std::string TEXTURE_PATH = "src/assets/textures/stone.png";
+const std::string TEXTURE_PATH = "src/assets/textures/merged.png";
 const std::string VERTEX_SHADER_PATH = "src/shaders/vert.spv";
 const std::string FRAG_SHADER_PATH = "src/shaders/frag.spv";
 

@@ -26,7 +26,7 @@
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
-
+const int TEX_WIDTH = 2;
 class App {
    public:
     void run() {
@@ -50,6 +50,8 @@ class App {
     std::vector<Vertex> vertices;
 
     std::vector<uint32_t> indices;
+
+    int buildMat = 1;
 
     bool cursorLocked = false;
     bool firstMousePosition = true;
@@ -97,7 +99,7 @@ class App {
             if (app->cursorLocked) {
                 auto cell = app->buildCell;
                 auto cellUV = app->buildCellUV;
-                app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, 1, true);
+                app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, app->buildMat, true);
             }
 
         }
@@ -140,6 +142,12 @@ class App {
             } else if (key == GLFW_KEY_ESCAPE) {
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                 app->cursorLocked = false;
+            } else if (key == GLFW_KEY_1) {
+                app->buildMat = 1;
+            } else if (key == GLFW_KEY_2) {
+                app->buildMat = 2;
+            } else if (key == GLFW_KEY_3) {
+                app->buildMat = 3;
             }
         } else if (action == GLFW_RELEASE) {
             if (key == GLFW_KEY_W) {
@@ -208,11 +216,11 @@ class App {
         return indexIndex - 1;
     }
 
-    void generateCube(int x, int y, int z, int u, int v, glm::vec2 texCord) {
+    void generateCube(int x, int y, int z, int u, int v, int mat) {
 
         
-
-        int a = 1;
+        glm::vec2 texCord = glm::vec2(((mat - 1) % TEX_WIDTH) / (double)TEX_WIDTH, ((mat - 1) / TEX_WIDTH) / (double)TEX_WIDTH);
+        float a = 1.0 / TEX_WIDTH;
 
         cubeIndexLocations[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
         addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
@@ -271,7 +279,7 @@ class App {
         if (material == 0) {
             removeCube(x, y, z, u, v);
         } else {
-            generateCube(x, y, z, u, v, {0, 0});
+            generateCube(x, y, z, u, v, material);
         }
 
 
