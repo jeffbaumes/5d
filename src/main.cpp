@@ -219,8 +219,8 @@ class App {
     void generateCube(int x, int y, int z, int u, int v, int mat) {
 
         
-        glm::vec2 texCord = glm::vec2(((mat - 1) % TEX_WIDTH) / (double)TEX_WIDTH, ((mat - 1) / TEX_WIDTH) / (double)TEX_WIDTH);
-        float a = 1.0 / TEX_WIDTH;
+        glm::vec2 texCord = glm::vec2(((mat - 1) % TEX_WIDTH) / (double)TEX_WIDTH - 0.0005, ((mat - 1) / TEX_WIDTH) / (double)TEX_WIDTH - 0.0005);
+	float a = 1.0 / TEX_WIDTH - 0.0005;
 
         cubeIndexLocations[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
         addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
