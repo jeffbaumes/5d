@@ -58,8 +58,8 @@ VkVertexInputBindingDescription Vertex::getBindingDescription() {
     return bindingDescription;
 }
 
-std::array<VkVertexInputAttributeDescription, 3> Vertex::getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+std::array<VkVertexInputAttributeDescription, 5> Vertex::getAttributeDescriptions() {
+    std::array<VkVertexInputAttributeDescription, 5> attributeDescriptions{};
 
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
@@ -74,13 +74,28 @@ std::array<VkVertexInputAttributeDescription, 3> Vertex::getAttributeDescription
     attributeDescriptions[2].binding = 0;
     attributeDescriptions[2].location = 2;
     attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+    attributeDescriptions[2].offset = offsetof(Vertex, UV);
+
+    attributeDescriptions[3].binding = 0;
+    attributeDescriptions[3].location = 3;
+    attributeDescriptions[3].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[3].offset = offsetof(Vertex, texCoord);
+
+    attributeDescriptions[4].binding = 0;
+    attributeDescriptions[4].location = 4;
+    attributeDescriptions[4].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[4].offset = offsetof(Vertex, face);
 
     return attributeDescriptions;
 }
 
 bool Vertex::operator==(const Vertex &other) const {
-    return pos == other.pos && color == other.color && texCoord == other.texCoord;
+    return
+        pos == other.pos &&
+        color == other.color &&
+        texCoord == other.texCoord &&
+        UV == other.UV &&
+        face == other.face;
 }
 
 void VulkanUtil::init() {
@@ -160,13 +175,21 @@ void VulkanUtil::setVerticesAndIndices(std::vector<Vertex> vertices, std::vector
     this->vertices = vertices;
     this->indices = indices;
 
-    createVertexBuffer();
-    createIndexBuffer();
+    createVertexBuffer(false);
+    createIndexBuffer(false);
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
     createCommandBuffers();
     createSyncObjects();
+}
+
+void VulkanUtil::resetVerticesAndIndices(std::vector<Vertex> vertices, std::vector<uint32_t> indices) {
+    this->vertices = vertices;
+    this->indices = indices;
+
+    createVertexBuffer(true);
+    createIndexBuffer(true);
 }
 
 void VulkanUtil::cleanupSwapChain() {
@@ -865,11 +888,11 @@ void VulkanUtil::createTextureImageView() {
 void VulkanUtil::createTextureSampler() {
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.magFilter = VK_FILTER_NEAREST;
+    samplerInfo.minFilter = VK_FILTER_NEAREST;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.anisotropyEnable = VK_TRUE;
     samplerInfo.maxAnisotropy = 16.0f;
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -1009,7 +1032,7 @@ void VulkanUtil::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
     endSingleTimeCommands(commandBuffer);
 }
 
-void VulkanUtil::createVertexBuffer() {
+void VulkanUtil::createVertexBuffer(bool update) {
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
     VkBuffer stagingBuffer;
@@ -1021,7 +1044,9 @@ void VulkanUtil::createVertexBuffer() {
     memcpy(data, vertices.data(), (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+    if (!update) {
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+    }
 
     copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
@@ -1029,7 +1054,7 @@ void VulkanUtil::createVertexBuffer() {
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void VulkanUtil::createIndexBuffer() {
+void VulkanUtil::createIndexBuffer(bool update) {
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     VkBuffer stagingBuffer;
@@ -1041,7 +1066,9 @@ void VulkanUtil::createIndexBuffer() {
     memcpy(data, indices.data(), (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+    if (!update) {
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+    }
 
     copyBuffer(stagingBuffer, indexBuffer, bufferSize);
 
