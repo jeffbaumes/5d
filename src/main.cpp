@@ -342,8 +342,9 @@ class App {
     glm::vec2 uv = glm::vec2(size / 2, size / 2);
     glm::vec3 lookHeading = glm::vec3(1.0f, 0.0f, 0.0f);
     float lookAltitude = 0.0f;
-    float height = 1.0f;
-    float radius = 0.1f;
+    float height = 2.0f;
+    float radius = 0.5f;
+    // float uvRadius = 0.1f;
     glm::vec2 oldUv = glm::vec2(size / 2, size / 2);
     bool holdingJump = false;
     bool inJump = false;
