@@ -63,10 +63,11 @@ struct Vertex {
     glm::vec3 color;
     glm::vec2 UV;
     glm::vec2 texCoord;
+    glm::vec3 face;
 
     static VkVertexInputBindingDescription getBindingDescription();
 
-    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions();
+    static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
 
     bool operator==(const Vertex &other) const;
 };
@@ -75,7 +76,18 @@ namespace std {
 template <>
 struct hash<Vertex> {
     size_t operator()(Vertex const &vertex) const {
-        return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^ (hash<glm::vec2>()(vertex.texCoord) << 1);
+        size_t h1 = hash<glm::vec3>()(vertex.pos);
+        size_t h2 = hash<glm::vec3>()(vertex.color);
+        size_t h3 = hash<glm::vec2>()(vertex.texCoord);
+        size_t h4 = hash<glm::vec2>()(vertex.UV);
+        size_t h5 = hash<glm::vec3>()(vertex.face);
+
+        size_t h = h1 ^ (h2 << 1);
+        h = h ^ (h3 << 1);
+        h = h ^ (h4 << 1);
+        h = h ^ (h5 << 1);
+
+        return h;
     }
 };
 }

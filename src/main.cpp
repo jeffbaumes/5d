@@ -163,18 +163,7 @@ class App {
                 app->upVel = 0.0f;
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
                 app->uvTravel = false;
-                glm::vec2 uvDist = app->uv - app->oldUv;
-                if (uvDist.x < 0) {
-                    app->uv.x = ceil(app->uv.x);
-                } else {
-                    app->uv.x = floor(app->uv.x);
-                }
-
-                if (uvDist.y < 0) {
-                    app->uv.y = ceil(app->uv.y);
-                } else {
-                    app->uv.y = floor(app->uv.y);
-                }
+                app->uv = glm::round(app->uv);
             }
         }
     }
@@ -218,51 +207,52 @@ class App {
 
     void generateCube(int x, int y, int z, int u, int v, int mat) {
 
-        
-        glm::vec2 texCord = glm::vec2(((mat - 1) % TEX_WIDTH) / (double)TEX_WIDTH - 0.0005, ((mat - 1) / TEX_WIDTH) / (double)TEX_WIDTH - 0.0005);
-	float a = 1.0 / TEX_WIDTH - 0.0005;
 
-        cubeIndexLocations[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}});
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}});
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
+        float a2 = 0.0001;
+        glm::vec2 texCord = glm::vec2(((mat - 1) % TEX_WIDTH) / (double)TEX_WIDTH + a2, ((mat - 1) / TEX_WIDTH) / (double)TEX_WIDTH + a2);
+	float a = 1.0 / TEX_WIDTH - 2.0 * a2;
 
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}});
+        cubeIndexLocations[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
+        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
+        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 0, -1}});
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
+        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 0, -1}});
+        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
 
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}});
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}});
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
+        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
+        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 0, 1}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
+        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
+        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 0, 1}});
 
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}});
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
+        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
+        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {-1, 0, 0}});
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
+        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {-1, 0, 0}});
+        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
 
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}});
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}});
+        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
+        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {1, 0, 0}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
+        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
+        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {1, 0, 0}});
 
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}});
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}});
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}});
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
+        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, -1, 0}});
+        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
+        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
+        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
+        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, -1, 0}});
+
+        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
+        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 1, 0}});
+        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
+        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 1, 0}});
+        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
     }
 
     void removeCube(int x, int y, int z, int u, int v) {
@@ -326,7 +316,8 @@ class App {
                             // if (x <= s && x >= -s && y <= s && y >= -s && z <= s && z >= -s && u <= s && u >= -s && v <= s && v >= -s) {
                             if (y <= size / 2 || x == 0 || y == 0 || z == 0 || u == 0 || v == 0) {
                             // if (x / 2 + y + z / 2 + u / 2 + v / 2 < 10) {
-                                setCell(x, y, z, u, v, 1, false);
+                                int material = rand() % 2 + 1;
+                                setCell(x, y, z, u, v, material, false);
                             }
                         }
                     }
