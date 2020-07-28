@@ -8,6 +8,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_ENABLE_EXPERIMENTAL
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
@@ -95,9 +96,11 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
-    alignas(16) glm::vec2 uv;
     alignas(16) glm::vec3 selectedCell;
-    alignas(16) glm::vec2 selectedCellUV;
+    alignas(16) glm::vec3 xyz;
+    alignas(8) glm::vec2 uv;
+    alignas(8) glm::vec2 selectedCellUV;
+    alignas(4) float uvView;
 };
 
 class VulkanUtil {

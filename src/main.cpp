@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iostream>
 #include <optional>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
@@ -27,6 +28,9 @@
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int TEX_WIDTH = 2;
+
+typedef std::array<int, 6> SideIndex;
+
 class App {
    public:
     void run() {
@@ -40,16 +44,15 @@ class App {
 
    private:
     GLFWwindow *window;
-
     VulkanUtil vulkan;
-
     std::vector<int> cells;
-
-    std::vector<int> cubeIndexLocations;
-
     std::vector<Vertex> vertices;
-
     std::vector<uint32_t> indices;
+    std::map<SideIndex, size_t> sideIndices;
+    int size = 8;
+    std::unordered_map<Vertex, uint32_t> uniqueVertices;
+    long vertexIndex = 0;
+    long indexIndex = 0;
 
     int buildMat = 1;
 
@@ -57,6 +60,9 @@ class App {
     bool firstMousePosition = true;
 
     bool framebufferResized = false;
+
+    double lastX = 0;
+    double lastY = 0;
 
     void initWindow() {
         glfwInit();
@@ -92,7 +98,6 @@ class App {
                 auto cellUV = app->focusedCellUV;
                 app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, 0, true);
             }
-
         }
 
         if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
@@ -101,12 +106,8 @@ class App {
                 auto cellUV = app->buildCellUV;
                 app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, app->buildMat, true);
             }
-
         }
     }
-
-    double lastX = 0;
-    double lastY = 0;
 
     static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos) {
         auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
@@ -122,7 +123,6 @@ class App {
         }
     }
 
-
     static void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
         auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
         if (action == GLFW_PRESS) {
@@ -134,6 +134,8 @@ class App {
                 app->rightVel = app->walkVel;
             } else if (key == GLFW_KEY_A) {
                 app->leftVel = app->walkVel;
+            } else if (key == GLFW_KEY_V) {
+                app->uvViewTarget = 1.0 - app->uvViewTarget;
             } else if (key == GLFW_KEY_SPACE) {
                 app->holdingJump = true;
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
@@ -192,8 +194,6 @@ class App {
     }
 
     int addVertex(const Vertex &vertex) {
-        static long vertexIndex = 0;
-        static long indexIndex = 0;
         if (uniqueVertices.count(vertex) == 0) {
             uniqueVertices[vertex] = static_cast<uint32_t>(vertexIndex);
             vertices[vertexIndex] = vertex;
@@ -204,60 +204,92 @@ class App {
         return indexIndex - 1;
     }
 
-    void generateCube(int x, int y, int z, int u, int v, int mat) {
+    void removeSide(int x, int y, int z, int u, int v, int side) {
+        // std::cerr << "removeSide " << x << "," << y << "," << z << "," << u << "," << v << "," << side << std::endl;
+        SideIndex sideIndex;
+        sideIndex[0] = x;
+        sideIndex[1] = y;
+        sideIndex[2] = z;
+        sideIndex[3] = u;
+        sideIndex[4] = v;
+        sideIndex[5] = side;
+        if (sideIndices.count(sideIndex)) {
+            size_t index = sideIndices[sideIndex];
+            // std::cerr << index << std::endl;
+            if (index % 6 != 0) {
+                std::cerr << "Side index not a multiple of 6!" << std::endl;
+            }
+            for (size_t i = index; i < index + 6; i += 1) {
+                indices[i] = 0;
+            }
+            sideIndices.erase(sideIndex);
+        } else {
+            // std::cerr << "No side found to remove" << std::endl;
+        }
+    }
 
+    void addSide(int x, int y, int z, int u, int v, int side) {
+        // std::cerr << "addSide " << x << "," << y << "," << z << "," << u << "," << v << "," << side << std::endl;
+        int mat = getCell(x, y, z, u, v);
+        if (mat == 0) {
+            return;
+        }
 
         float a2 = 0.0001;
         glm::vec2 texCord = glm::vec2(((mat - 1) % TEX_WIDTH) / (double)TEX_WIDTH + a2, ((mat - 1) / TEX_WIDTH) / (double)TEX_WIDTH + a2);
-	float a = 1.0 / TEX_WIDTH - 2.0 * a2;
+        float a = 1.0 / TEX_WIDTH - 2.0 * a2;
 
-        cubeIndexLocations[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 0, -1}});
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 0, -1}});
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
-
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 0, 1}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 0, 1}});
-
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {-1, 0, 0}});
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {-1, 0, 0}});
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
-
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {1, 0, 0}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {1, 0, 0}});
-
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
-        addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, -1, 0}});
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
-        addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
-        addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
-        addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, -1, 0}});
-
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
-        addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 1, 0}});
-        addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
-        addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 1, 0}});
-        addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
-    }
-
-    void removeCube(int x, int y, int z, int u, int v) {
-        int index = cubeIndexLocations[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v];
-        for (int x = index; x < index + 36; x++) {
-            indices[x] = 0;
+        SideIndex sideIndex;
+        sideIndex[0] = x;
+        sideIndex[1] = y;
+        sideIndex[2] = z;
+        sideIndex[3] = u;
+        sideIndex[4] = v;
+        sideIndex[5] = side;
+        sideIndices[sideIndex] = indexIndex;
+        // std::cerr << indexIndex << std::endl;
+        if (side == -3) {
+            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
+            addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
+            addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 0, -1}});
+            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
+            addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 0, -1}});
+            addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
+        } else if (side == 3) {
+            addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
+            addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 0, 1}});
+            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
+            addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
+            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
+            addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 0, 1}});
+        } else if (side == -1) {
+            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
+            addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
+            addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {-1, 0, 0}});
+            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
+            addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {-1, 0, 0}});
+            addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
+        } else if (side == 1) {
+            addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
+            addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {1, 0, 0}});
+            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
+            addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
+            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
+            addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {1, 0, 0}});
+        } else if (side == -2) {
+            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
+            addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, -1, 0}});
+            addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
+            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
+            addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
+            addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, -1, 0}});
+        } else if (side == 2) {
+            addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
+            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
+            addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 1, 0}});
+            addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
+            addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 1, 0}});
+            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
         }
     }
 
@@ -265,18 +297,109 @@ class App {
         if (x < 0 || x >= size || y < 0 || y >= size || z < 0 || z >= size || u < 0 || u >= size || v < 0 || v >= size) {
             return;
         }
-        if (material == 0) {
-            removeCube(x, y, z, u, v);
-        } else {
-            generateCube(x, y, z, u, v, material);
+
+        int oldMaterial = getCell(x, y, z, u, v);
+        if (material == oldMaterial) {
+            return;
         }
 
+        cells[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = material;
+
+        if (material == 0) {
+            for (int side = -3; side <= 3; side += 1) {
+                if (side != 0) {
+                    removeSide(x, y, z, u, v, side);
+                }
+            }
+            if (getCell(x - 1, y, z, u, v) != 0) {
+                addSide(x - 1, y, z, u, v, 1);
+            }
+            if (getCell(x, y, z, u - 1, v) != 0) {
+                addSide(x, y, z, u - 1, v, 1);
+            }
+            if (getCell(x + 1, y, z, u, v) != 0) {
+                addSide(x + 1, y, z, u, v, -1);
+            }
+            if (getCell(x, y, z, u + 1, v) != 0) {
+                addSide(x, y, z, u + 1, v, -1);
+            }
+
+            if (getCell(x, y - 1, z, u, v) != 0) {
+                addSide(x, y - 1, z, u, v, 2);
+            }
+            if (getCell(x, y + 1, z, u, v) != 0) {
+                addSide(x, y + 1, z, u, v, -2);
+            }
+
+            if (getCell(x, y, z - 1, u, v) != 0) {
+                addSide(x, y, z - 1, u, v, 3);
+            }
+            if (getCell(x, y, z, u, v - 1) != 0) {
+                addSide(x, y, z, u, v - 1, 3);
+            }
+            if (getCell(x, y, z + 1, u, v) != 0) {
+                addSide(x, y, z + 1, u, v, -3);
+            }
+            if (getCell(x, y, z, u, v + 1) != 0) {
+                addSide(x, y, z, u, v + 1, -3);
+            }
+        } else {
+            if (getCell(x - 1, y, z, u, v) == 0 || getCell(x, y, z, u - 1, v) == 0) {
+                addSide(x, y, z, u, v, -1);
+            }
+            if (getCell(x - 1, y, z, u, v) != 0) {
+                removeSide(x - 1, y, z, u, v, 1);
+            }
+            if (getCell(x, y, z, u - 1, v) != 0) {
+                removeSide(x, y, z, u - 1, v, 1);
+            }
+
+            if (getCell(x + 1, y, z, u, v) == 0 || getCell(x, y, z, u + 1, v) == 0) {
+                addSide(x, y, z, u, v, 1);
+            }
+            if (getCell(x + 1, y, z, u, v) != 0) {
+                removeSide(x + 1, y, z, u, v, -1);
+            }
+            if (getCell(x, y, z, u + 1, v) != 0) {
+                removeSide(x, y, z, u + 1, v, -1);
+            }
+
+            if (getCell(x, y - 1, z, u, v) == 0) {
+                addSide(x, y, z, u, v, -2);
+            } else {
+                removeSide(x, y - 1, z, u, v, 2);
+            }
+
+            if (getCell(x, y + 1, z, u, v) == 0) {
+                addSide(x, y, z, u, v, 2);
+            } else {
+                removeSide(x, y + 1, z, u, v, -2);
+            }
+
+            if (getCell(x, y, z - 1, u, v) == 0 || getCell(x, y, z, u, v - 1) == 0) {
+                addSide(x, y, z, u, v, -3);
+            }
+            if (getCell(x, y, z - 1, u, v) != 0) {
+                removeSide(x, y, z - 1, u, v, 3);
+            }
+            if (getCell(x, y, z, u, v - 1) != 0) {
+                removeSide(x, y, z, u, v - 1, 3);
+            }
+
+            if (getCell(x, y, z + 1, u, v) == 0 || getCell(x, y, z, u, v + 1) == 0) {
+                addSide(x, y, z, u, v, 3);
+            }
+            if (getCell(x, y, z + 1, u, v) != 0) {
+                removeSide(x, y, z + 1, u, v, -3);
+            }
+            if (getCell(x, y, z, u, v + 1) != 0) {
+                removeSide(x, y, z, u, v + 1, -3);
+            }
+        }
 
         if (running) {
             vulkan.resetVerticesAndIndices(vertices, indices);
         }
-
-        cells[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = material;
     }
 
     int getCell(int x, int y, int z, int u, int v) {
@@ -286,19 +409,16 @@ class App {
         return cells[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v];
     }
 
-    int size = 8;
-    std::unordered_map<Vertex, uint32_t> uniqueVertices;
-
     void addWorldVertices() {
         cells.resize(size * size * size * size * size, 0);
-        cubeIndexLocations.resize(size * size * size * size * size, 0);
         vertices.resize(size * size * size * size * size * 20, {{0, 0, 0}, {0, 0, 0}, {0, 0}});
         indices.resize(size * size * size * size * size * 36, 0);
 
-        // addVertex({{0, 0, 0}, {2147483647, 2147483647, 2147483647}, {0, 0}});
-        // addVertex({{0, 0, 0}, {2147483647, 2147483647, 2147483647}, {0, 0}});
-        // addVertex({{0, 0, 0}, {2147483647, 2147483647, 2147483647}, {0, 0}});
-
+        // addVertex({{INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX}});
+        // addVertex({{INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX}});
+        // addVertex({{INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX}});
+        vertices.push_back({});
+        vertexIndex += 1;
 
         for (int x = 0; x < size; x += 1) {
             for (int y = 0; y < size; y += 1) {
@@ -324,6 +444,13 @@ class App {
             }
         }
 
+        // for (size_t i = 0; i < indices.size(); i += 1) {
+        //     if (i % 3 == 0) {
+        //         std::cerr << std::endl;
+        //     }
+        //     std::cerr << indices[i] << " ";
+        // }
+
         vulkan.setVerticesAndIndices(vertices, indices);
     }
 
@@ -337,12 +464,12 @@ class App {
     bool uvTravel = false;
     float fallVel = 0.0f;
     float walkVel = 2.0f;
-    glm::vec3 loc = glm::vec3(size / 2, size / 2 + 2, size / 2);
+    glm::vec3 loc = glm::vec3(size / 2, size / 2 + 3, size / 2);
     glm::vec2 uv = glm::vec2(size / 2, size / 2);
     glm::vec3 lookHeading = glm::vec3(1.0f, 0.0f, 0.0f);
     float lookAltitude = 0.0f;
-    float height = 1.0f;
-    float radius = 0.1f;
+    float height = 1.75f;
+    float radius = 0.25f;
     glm::vec2 oldUv = glm::vec2(size / 2, size / 2);
     bool holdingJump = false;
     bool inJump = false;
@@ -350,7 +477,8 @@ class App {
     glm::vec2 focusedCellUV = glm::vec2(0, 0);
     glm::vec3 buildCell = glm::vec3(0, 0, 0);
     glm::vec2 buildCellUV = glm::vec2(0, 0);
-
+    float uvView = 0.0f;
+    float uvViewTarget = 0.0f;
 
     glm::vec3 project(glm::vec3 a, glm::vec3 b) {
         glm::vec3 bn = glm::normalize(b);
@@ -444,19 +572,37 @@ class App {
         glm::vec3 playerVel = up * fallVel;
         playerVel = playerVel + lookHeading * (forwardVel - backVel);
         playerVel = playerVel + right * (rightVel - leftVel);
-        if (uvTravel) {
+
+        // Move
+        if (uvTravel == (uvView < 0.5f)) {
             uv = uv + (glm::vec2(playerVel.x, playerVel.z) * time);
             loc.y = loc.y + (playerVel.y * time);
         } else {
             loc = loc + (playerVel * time);
-            glm::vec2 rounded = glm::round(uv);
-            uv = 0.2f * rounded + 0.8f * uv;
-            if (glm::length(uv - rounded) < 0.01f) {
-                uv = rounded;
-            // } else {
-            //     uv = uv + 0.01f * glm::normalize(rounded - uv);
+        }
+
+        // Snap hidden dimensions
+        if (!uvTravel) {
+            if (uvView < 0.5f) {
+                glm::vec2 rounded = glm::round(uv);
+                if (glm::length(uv - rounded) < 0.01f) {
+                    uv = rounded;
+                } else {
+                    uv = 0.1f * rounded + 0.9f * uv;
+                }
+            } else {
+                glm::vec2 hide = glm::vec2(loc.x, loc.z);
+                glm::vec2 rounded = glm::round(hide);
+                if (glm::length(hide - rounded) < 0.01f) {
+                    loc.x = rounded.x;
+                    loc.z = rounded.y;
+                } else {
+                    loc.x = 0.1f * rounded.x + 0.9f * hide.x;
+                    loc.z = 0.1f * rounded.y + 0.9f * hide.y;
+                }
             }
         }
+
         for (float h = 0.5f; h < height; h += 1.0f) {
             collide(h, 1, 0, 0, 0, 0);
             collide(h, -1, 0, 0, 0, 0);
@@ -498,9 +644,6 @@ class App {
             prevCell = floorpos;
             prevCellUV = glm::floor(uv);
 	    }
-
-        // std::cout << focusedCell.x << "," << focusedCell.y << "," << focusedCell.z << "," << focusedCellUV.x << "," << focusedCellUV.y << std::endl;
-
     }
 
     std::chrono::high_resolution_clock::time_point lastTime;
@@ -523,14 +666,29 @@ class App {
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f) / 4.0f, glm::vec3(0.0f, 0.0f, 1.0f));
         glm::vec3 look = lookDir();
-        ubo.view = glm::lookAt(loc, loc + look, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::vec3 eye = loc;
+        if (uvView > 0.5f) {
+            eye = glm::vec3(uv.x, loc.y, uv.y);
+        }
+        ubo.view = glm::lookAt(eye, eye + look, glm::vec3(0.0f, 1.0f, 0.0f));
         ubo.proj = glm::perspective(glm::radians(45.0f), vulkan.swapChainExtent.width / (float)vulkan.swapChainExtent.height, 0.02f, 50.0f);
         ubo.proj[1][1] *= -1;
-
+        ubo.xyz = loc;
         ubo.uv = uv;
 
-        ubo.selectedCell = focusedCell;
-        ubo.selectedCellUV = focusedCellUV;
+        // ubo.selectedCell = focusedCell;
+        // ubo.selectedCellUV = focusedCellUV;
+
+        if (glm::abs(uvViewTarget - uvView) < 0.01f) {
+            uvView = uvViewTarget;
+        } else {
+            // Linear travel
+            // uvView = uvView + 0.01f * (uvViewTarget - uvView);
+
+            // Exponential travel
+            uvView = 0.05f * uvViewTarget + 0.95f * uvView;
+        }
+        ubo.uvView = uvView;
 
         vulkan.ubo = ubo;
     }
