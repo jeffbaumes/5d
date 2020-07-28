@@ -347,20 +347,20 @@ class App {
             if (getCell(x - 1, y, z, u, v) == 0 || getCell(x, y, z, u - 1, v) == 0) {
                 addSide(x, y, z, u, v, -1);
             }
-            if (getCell(x - 1, y, z, u, v) != 0) {
+            if (getCell(x - 1, y, z, u, v) != 0 && getCell(x - 1, y, z, u + 1, v) != 0) {
                 removeSide(x - 1, y, z, u, v, 1);
             }
-            if (getCell(x, y, z, u - 1, v) != 0) {
+            if (getCell(x, y, z, u - 1, v) != 0 && getCell(x + 1, y, z, u - 1, v) != 0) {
                 removeSide(x, y, z, u - 1, v, 1);
             }
 
             if (getCell(x + 1, y, z, u, v) == 0 || getCell(x, y, z, u + 1, v) == 0) {
                 addSide(x, y, z, u, v, 1);
             }
-            if (getCell(x + 1, y, z, u, v) != 0) {
+            if (getCell(x + 1, y, z, u, v) != 0 && getCell(x + 1, y, z, u - 1, v) != 0) {
                 removeSide(x + 1, y, z, u, v, -1);
             }
-            if (getCell(x, y, z, u + 1, v) != 0) {
+            if (getCell(x, y, z, u + 1, v) != 0 && getCell(x - 1, y, z, u + 1, v) != 0) {
                 removeSide(x, y, z, u + 1, v, -1);
             }
 
@@ -379,20 +379,20 @@ class App {
             if (getCell(x, y, z - 1, u, v) == 0 || getCell(x, y, z, u, v - 1) == 0) {
                 addSide(x, y, z, u, v, -3);
             }
-            if (getCell(x, y, z - 1, u, v) != 0) {
+            if (getCell(x, y, z - 1, u, v) != 0 && getCell(x, y, z - 1, u, v + 1) != 0) {
                 removeSide(x, y, z - 1, u, v, 3);
             }
-            if (getCell(x, y, z, u, v - 1) != 0) {
+            if (getCell(x, y, z, u, v - 1) != 0 && getCell(x, y, z + 1, u, v - 1) != 0) {
                 removeSide(x, y, z, u, v - 1, 3);
             }
 
             if (getCell(x, y, z + 1, u, v) == 0 || getCell(x, y, z, u, v + 1) == 0) {
                 addSide(x, y, z, u, v, 3);
             }
-            if (getCell(x, y, z + 1, u, v) != 0) {
+            if (getCell(x, y, z + 1, u, v) != 0 && getCell(x, y, z + 1, u, v - 1) != 0) {
                 removeSide(x, y, z + 1, u, v, -3);
             }
-            if (getCell(x, y, z, u, v + 1) != 0) {
+            if (getCell(x, y, z, u, v + 1) != 0 && getCell(x, y, z - 1, u, v + 1) != 0) {
                 removeSide(x, y, z, u, v + 1, -3);
             }
         }
