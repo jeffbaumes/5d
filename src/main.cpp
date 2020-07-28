@@ -163,7 +163,6 @@ class App {
                 app->upVel = 0.0f;
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
                 app->uvTravel = false;
-                app->uv = glm::round(app->uv);
             }
         }
     }
@@ -450,6 +449,13 @@ class App {
             loc.y = loc.y + (playerVel.y * time);
         } else {
             loc = loc + (playerVel * time);
+            glm::vec2 rounded = glm::round(uv);
+            uv = 0.2f * rounded + 0.8f * uv;
+            if (glm::length(uv - rounded) < 0.01f) {
+                uv = rounded;
+            // } else {
+            //     uv = uv + 0.01f * glm::normalize(rounded - uv);
+            }
         }
         for (float h = 0.5f; h < height; h += 1.0f) {
             collide(h, 1, 0, 0, 0, 0);

@@ -30,6 +30,7 @@ void main() {
     vec3 frac = vec3(uvFrac.x, 0.0, uvFrac.y);
     vec3 pos = vec3(1000000.0, inPosition.y, 0.0);
     vec2 tex = texCord;
+    float area = 0.0;
     if (inUV == uvFloor) {
         pos.x = inPosition.x - frac.x;
         pos.z = inPosition.z - frac.z;
@@ -38,6 +39,7 @@ void main() {
         } else if (face.z == -1.0) {
             pos.z = 0.001;
         }
+        area = (1.0 - frac.x) * (1.0 - frac.z);
     } else if (inUV == uvFloor + vec2(1.0, 0.0) && uv != uvFloor) {
         pos.x = inPosition.x - frac.x + 1.0;
         pos.z = inPosition.z - frac.z;
@@ -46,6 +48,7 @@ void main() {
         } else if (face.z == -1.0) {
             pos.z = 0.001;
         }
+        area = frac.x * (1.0 - frac.z);
     } else if (inUV == uvFloor + vec2(0.0, 1.0) && uv != uvFloor) {
         pos.x = inPosition.x - frac.x;
         pos.z = inPosition.z - frac.z + 1.0;
@@ -54,6 +57,7 @@ void main() {
         } else if (face.z == 1.0) {
             pos.z = 0.999;
         }
+        area = (1.0 - frac.x) * frac.z;
     } else if (inUV == uvFloor + vec2(1.0, 1.0) && uv != uvFloor) {
         pos.x = inPosition.x - frac.x + 1.0;
         pos.z = inPosition.z - frac.z + 1.0;
@@ -62,6 +66,7 @@ void main() {
         } else if (face.z == 1.0) {
             pos.z = 0.999;
         }
+        area = frac.x * frac.z;
     }
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(pos + inXYZ, 1.0);
     if (floor(inXYZ) == ubo.selectedCell && floor(inUV) == ubo.selectedCellUV) {
@@ -70,6 +75,7 @@ void main() {
         fragColor = inXYZ / 8;
         // fragColor = 0.5 * (inXYZ + 4.0) / 8.0 + 0.5 * vec3((inUV + 4.0)/ 8.0, 1.0) - 0.25 * inPosition;
     }
+    fragColor = vec3(area);
     fragTexCoord = tex;
     fragPosition = vec2(pos.x, pos.z);
 }
