@@ -24,10 +24,10 @@
 #include <vector>
 
 #include "VulkanUtil.hpp"
+#include "World.hpp"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
-const int TEX_WIDTH = 2;
 
 typedef std::array<int, 6> SideIndex;
 
@@ -37,7 +37,7 @@ class App {
         initWindow();
         initVulkan();
         createSurface();
-        addWorldVertices();
+        initWorld();
         mainLoop();
         cleanup();
     }
@@ -45,9 +45,8 @@ class App {
    private:
     GLFWwindow *window;
     VulkanUtil vulkan;
+    World world = World(vulkan);
     std::vector<int> cells;
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
     std::map<SideIndex, size_t> sideIndices;
     int size = 8;
     std::unordered_map<Vertex, uint32_t> uniqueVertices;
@@ -81,6 +80,10 @@ class App {
         vulkan.init();
     }
 
+    void initWorld() {
+        world.loadChunk({0, 0, 0, 0, 0});
+    }
+
     static void framebufferResizeCallback(GLFWwindow *window, int width, int height) {
         auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
         app->vulkan.framebufferResized = true;
@@ -96,7 +99,7 @@ class App {
             } else {
                 auto cell = app->focusedCell;
                 auto cellUV = app->focusedCellUV;
-                app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, 0, true);
+                app->world.setCell({cell.x, cell.y, cell.z, cellUV.x, cellUV.y}, 0);
             }
         }
 
@@ -104,7 +107,7 @@ class App {
             if (app->cursorLocked) {
                 auto cell = app->buildCell;
                 auto cellUV = app->buildCellUV;
-                app->setCell(cell.x, cell.y, cell.z, cellUV.x, cellUV.y, app->buildMat, true);
+                app->world.setCell({cell.x, cell.y, cell.z, cellUV.x, cellUV.y}, app->buildMat);
             }
         }
     }
@@ -193,267 +196,6 @@ class App {
         vulkan.initSurface(surface);
     }
 
-    int addVertex(const Vertex &vertex) {
-        if (uniqueVertices.count(vertex) == 0) {
-            uniqueVertices[vertex] = static_cast<uint32_t>(vertexIndex);
-            vertices[vertexIndex] = vertex;
-            vertexIndex += 1;
-        }
-        indices[indexIndex] = uniqueVertices[vertex];
-        indexIndex += 1;
-        return indexIndex - 1;
-    }
-
-    void removeSide(int x, int y, int z, int u, int v, int side) {
-        // std::cerr << "removeSide " << x << "," << y << "," << z << "," << u << "," << v << "," << side << std::endl;
-        SideIndex sideIndex;
-        sideIndex[0] = x;
-        sideIndex[1] = y;
-        sideIndex[2] = z;
-        sideIndex[3] = u;
-        sideIndex[4] = v;
-        sideIndex[5] = side;
-        if (sideIndices.count(sideIndex)) {
-            size_t index = sideIndices[sideIndex];
-            // std::cerr << index << std::endl;
-            if (index % 6 != 0) {
-                std::cerr << "Side index not a multiple of 6!" << std::endl;
-            }
-            for (size_t i = index; i < index + 6; i += 1) {
-                indices[i] = 0;
-            }
-            sideIndices.erase(sideIndex);
-        } else {
-            // std::cerr << "No side found to remove" << std::endl;
-        }
-    }
-
-    void addSide(int x, int y, int z, int u, int v, int side) {
-        // std::cerr << "addSide " << x << "," << y << "," << z << "," << u << "," << v << "," << side << std::endl;
-        int mat = getCell(x, y, z, u, v);
-        if (mat == 0) {
-            return;
-        }
-
-        float a2 = 0.0001;
-        glm::vec2 texCord = glm::vec2(((mat - 1) % TEX_WIDTH) / (double)TEX_WIDTH + a2, ((mat - 1) / TEX_WIDTH) / (double)TEX_WIDTH + a2);
-        float a = 1.0 / TEX_WIDTH - 2.0 * a2;
-
-        SideIndex sideIndex;
-        sideIndex[0] = x;
-        sideIndex[1] = y;
-        sideIndex[2] = z;
-        sideIndex[3] = u;
-        sideIndex[4] = v;
-        sideIndex[5] = side;
-        sideIndices[sideIndex] = indexIndex;
-        // std::cerr << indexIndex << std::endl;
-        if (side == -3) {
-            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
-            addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
-            addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 0, -1}});
-            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
-            addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 0, -1}});
-            addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
-        } else if (side == 3) {
-            addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
-            addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 0, 1}});
-            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
-            addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
-            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
-            addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 0, 1}});
-        } else if (side == -1) {
-            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
-            addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
-            addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {-1, 0, 0}});
-            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
-            addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {-1, 0, 0}});
-            addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
-        } else if (side == 1) {
-            addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
-            addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {1, 0, 0}});
-            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
-            addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
-            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
-            addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {1, 0, 0}});
-        } else if (side == -2) {
-            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
-            addVertex({{1, 0, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, -1, 0}});
-            addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
-            addVertex({{0, 0, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
-            addVertex({{1, 0, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
-            addVertex({{0, 0, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, -1, 0}});
-        } else if (side == 2) {
-            addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
-            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
-            addVertex({{1, 1, 0}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + 0}, {0, 1, 0}});
-            addVertex({{0, 1, 0}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
-            addVertex({{0, 1, 1}, {x, y, z}, {u, v}, {texCord.x + 0, texCord.y + a}, {0, 1, 0}});
-            addVertex({{1, 1, 1}, {x, y, z}, {u, v}, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
-        }
-    }
-
-    void setCell(int x, int y, int z, int u, int v, int material, bool running) {
-        if (x < 0 || x >= size || y < 0 || y >= size || z < 0 || z >= size || u < 0 || u >= size || v < 0 || v >= size) {
-            return;
-        }
-
-        int oldMaterial = getCell(x, y, z, u, v);
-        if (material == oldMaterial) {
-            return;
-        }
-
-        cells[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v] = material;
-
-        if (material == 0) {
-            for (int side = -3; side <= 3; side += 1) {
-                if (side != 0) {
-                    removeSide(x, y, z, u, v, side);
-                }
-            }
-            if (getCell(x - 1, y, z, u, v) != 0) {
-                addSide(x - 1, y, z, u, v, 1);
-            }
-            if (getCell(x, y, z, u - 1, v) != 0) {
-                addSide(x, y, z, u - 1, v, 1);
-            }
-            if (getCell(x + 1, y, z, u, v) != 0) {
-                addSide(x + 1, y, z, u, v, -1);
-            }
-            if (getCell(x, y, z, u + 1, v) != 0) {
-                addSide(x, y, z, u + 1, v, -1);
-            }
-
-            if (getCell(x, y - 1, z, u, v) != 0) {
-                addSide(x, y - 1, z, u, v, 2);
-            }
-            if (getCell(x, y + 1, z, u, v) != 0) {
-                addSide(x, y + 1, z, u, v, -2);
-            }
-
-            if (getCell(x, y, z - 1, u, v) != 0) {
-                addSide(x, y, z - 1, u, v, 3);
-            }
-            if (getCell(x, y, z, u, v - 1) != 0) {
-                addSide(x, y, z, u, v - 1, 3);
-            }
-            if (getCell(x, y, z + 1, u, v) != 0) {
-                addSide(x, y, z + 1, u, v, -3);
-            }
-            if (getCell(x, y, z, u, v + 1) != 0) {
-                addSide(x, y, z, u, v + 1, -3);
-            }
-        } else {
-            if (getCell(x - 1, y, z, u, v) == 0 || getCell(x, y, z, u - 1, v) == 0) {
-                addSide(x, y, z, u, v, -1);
-            }
-            if (getCell(x - 1, y, z, u, v) != 0 && getCell(x - 1, y, z, u + 1, v) != 0) {
-                removeSide(x - 1, y, z, u, v, 1);
-            }
-            if (getCell(x, y, z, u - 1, v) != 0 && getCell(x + 1, y, z, u - 1, v) != 0) {
-                removeSide(x, y, z, u - 1, v, 1);
-            }
-
-            if (getCell(x + 1, y, z, u, v) == 0 || getCell(x, y, z, u + 1, v) == 0) {
-                addSide(x, y, z, u, v, 1);
-            }
-            if (getCell(x + 1, y, z, u, v) != 0 && getCell(x + 1, y, z, u - 1, v) != 0) {
-                removeSide(x + 1, y, z, u, v, -1);
-            }
-            if (getCell(x, y, z, u + 1, v) != 0 && getCell(x - 1, y, z, u + 1, v) != 0) {
-                removeSide(x, y, z, u + 1, v, -1);
-            }
-
-            if (getCell(x, y - 1, z, u, v) == 0) {
-                addSide(x, y, z, u, v, -2);
-            } else {
-                removeSide(x, y - 1, z, u, v, 2);
-            }
-
-            if (getCell(x, y + 1, z, u, v) == 0) {
-                addSide(x, y, z, u, v, 2);
-            } else {
-                removeSide(x, y + 1, z, u, v, -2);
-            }
-
-            if (getCell(x, y, z - 1, u, v) == 0 || getCell(x, y, z, u, v - 1) == 0) {
-                addSide(x, y, z, u, v, -3);
-            }
-            if (getCell(x, y, z - 1, u, v) != 0 && getCell(x, y, z - 1, u, v + 1) != 0) {
-                removeSide(x, y, z - 1, u, v, 3);
-            }
-            if (getCell(x, y, z, u, v - 1) != 0 && getCell(x, y, z + 1, u, v - 1) != 0) {
-                removeSide(x, y, z, u, v - 1, 3);
-            }
-
-            if (getCell(x, y, z + 1, u, v) == 0 || getCell(x, y, z, u, v + 1) == 0) {
-                addSide(x, y, z, u, v, 3);
-            }
-            if (getCell(x, y, z + 1, u, v) != 0 && getCell(x, y, z + 1, u, v - 1) != 0) {
-                removeSide(x, y, z + 1, u, v, -3);
-            }
-            if (getCell(x, y, z, u, v + 1) != 0 && getCell(x, y, z - 1, u, v + 1) != 0) {
-                removeSide(x, y, z, u, v + 1, -3);
-            }
-        }
-
-        if (running) {
-            vulkan.resetVerticesAndIndices(vertices, indices);
-        }
-    }
-
-    int getCell(int x, int y, int z, int u, int v) {
-        if (x < 0 || x >= size || y < 0 || y >= size || z < 0 || z >= size || u < 0 || u >= size || v < 0 || v >= size) {
-            return 0;
-        }
-        return cells[x + size * y + size * size * z + size * size * size * u + size * size * size * size * v];
-    }
-
-    void addWorldVertices() {
-        cells.resize(size * size * size * size * size, 0);
-        vertices.resize(size * size * size * size * size * 20, {{0, 0, 0}, {0, 0, 0}, {0, 0}});
-        indices.resize(size * size * size * size * size * 36, 0);
-
-        // addVertex({{INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX}});
-        // addVertex({{INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX}});
-        // addVertex({{INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX, INT_MAX}, {INT_MAX, INT_MAX}});
-        vertices.push_back({});
-        vertexIndex += 1;
-
-        for (int x = 0; x < size; x += 1) {
-            for (int y = 0; y < size; y += 1) {
-                for (int z = 0; z < size; z += 1) {
-                    for (int u = 0; u < size; u += 1) {
-                        for (int v = 0; v < size; v += 1) {
-                            int dx = x - size / 2;
-                            int dy = y - size / 2;
-                            int dz = z - size / 2;
-                            int du = u - size / 2;
-                            int dv = v - size / 2;
-                            // if (dx * dx + dy * dy + dz * dz + du * du + dv * dv < (size / 2) * (size / 2)) {
-                            // int s = size / 4;
-                            // if (x <= s && x >= -s && y <= s && y >= -s && z <= s && z >= -s && u <= s && u >= -s && v <= s && v >= -s) {
-                            if (y <= size / 2 || x == 0 || y == 0 || z == 0 || u == 0 || v == 0) {
-                            // if (x / 2 + y + z / 2 + u / 2 + v / 2 < 10) {
-                                int material = rand() % 2 + 1;
-                                setCell(x, y, z, u, v, material, false);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // for (size_t i = 0; i < indices.size(); i += 1) {
-        //     if (i % 3 == 0) {
-        //         std::cerr << std::endl;
-        //     }
-        //     std::cerr << indices[i] << " ";
-        // }
-
-        vulkan.setVerticesAndIndices(vertices, indices);
-    }
-
     // Player stuff
     float forwardVel = 0.0f;
     float backVel = 0.0f;
@@ -518,7 +260,7 @@ class App {
         glm::vec2 cellUV = glm::floor(uv) + glm::vec2(0.5f, 0.5f);
         glm::vec3 adjCell = cell + d;
         glm::vec2 adjCellUV = cellUV + dUV;
-        int material = getCell(adjCell.x, adjCell.y, adjCell.z, adjCellUV.x, adjCellUV.y);
+        int material = world.getCell({adjCell.x, adjCell.y, adjCell.z, adjCellUV.x, adjCellUV.y});
         if (material != 0) {
             if (y != 0) {
                 // TODO
@@ -556,7 +298,7 @@ class App {
         glm::vec3 up(0.0f, 1.0f, 0.0f);
         glm::vec3 right = glm::cross(lookHeading, up);
         glm::vec3 feet = loc - (up * height);
-        int feetCell = getCell(floor(feet.x), floor(feet.y), floor(feet.z), floor(uv.x), floor(uv.y));
+        int feetCell = world.getCell({floor(feet.x), floor(feet.y), floor(feet.z), floor(uv.x), floor(uv.y)});
         bool falling = feetCell == 0;
         // bool falling = feet.y > size / 2;
         if (falling) {
@@ -633,7 +375,7 @@ class App {
         for (int i = 0; i < 100; i++) {
             pos = pos + increment;
             glm::vec3 floorpos = glm::floor(pos);
-            int cell = getCell(floorpos.x, floorpos.y, floorpos.z, floor(uv.x), floor(uv.y));
+            int cell = world.getCell({floorpos.x, floorpos.y, floorpos.z, floor(uv.x), floor(uv.y)});
             if (cell != 0) {
                 focusedCell = floorpos;
                 focusedCellUV = glm::floor(uv);
