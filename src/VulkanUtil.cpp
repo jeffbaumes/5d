@@ -171,12 +171,9 @@ void VulkanUtil::initSurface(VkSurfaceKHR surface) {
     createTextureSampler();
 }
 
-void VulkanUtil::setVerticesAndIndices(std::vector<Vertex> vertices, std::vector<uint32_t> indices) {
-    this->vertices = vertices;
-    this->indices = indices;
-
-    createVertexBuffer(false);
-    createIndexBuffer(false);
+void VulkanUtil::setVerticesAndIndices(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices) {
+    createVertexBuffer(vertices, false, 0, 0);
+    createIndexBuffer(indices, false, 0, 0);
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
@@ -184,12 +181,17 @@ void VulkanUtil::setVerticesAndIndices(std::vector<Vertex> vertices, std::vector
     createSyncObjects();
 }
 
-void VulkanUtil::resetVerticesAndIndices(std::vector<Vertex> vertices, std::vector<uint32_t> indices) {
-    this->vertices = vertices;
-    this->indices = indices;
+void VulkanUtil::resetVerticesAndIndices(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices) {
+    createVertexBuffer(vertices, true, 0, 0);
+    createIndexBuffer(indices, true, 0, 0);
+}
 
-    createVertexBuffer(true);
-    createIndexBuffer(true);
+void VulkanUtil::resetVertexRange(const std::vector<Vertex> &vertices, size_t start, size_t size) {
+    createVertexBuffer(vertices, true, start, size);
+}
+
+void VulkanUtil::resetIndexRange(const std::vector<uint32_t> &indices, size_t start, size_t size) {
+    createIndexBuffer(indices, true, start, size);
 }
 
 void VulkanUtil::cleanupSwapChain() {
@@ -1032,8 +1034,12 @@ void VulkanUtil::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
     endSingleTimeCommands(commandBuffer);
 }
 
-void VulkanUtil::createVertexBuffer(bool update) {
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+void VulkanUtil::createVertexBuffer(const std::vector<Vertex> &vertices, bool update, size_t start, size_t size) {
+    if (size == 0) {
+        size = vertices.size();
+    }
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * size;
+    VkDeviceSize bufferOffset = sizeof(vertices[0]) * start;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1041,21 +1047,26 @@ void VulkanUtil::createVertexBuffer(bool update) {
 
     void *data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), (size_t)bufferSize);
+    memcpy(data, vertices.data() + start, (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
     if (!update) {
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
     }
 
-    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+    copyBuffer(stagingBuffer, vertexBuffer, bufferOffset, bufferSize);
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void VulkanUtil::createIndexBuffer(bool update) {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+void VulkanUtil::createIndexBuffer(const std::vector<uint32_t> &indices, bool update, size_t start, size_t size) {
+    indexCount = indices.size();
+    if (size == 0) {
+        size = indices.size();
+    }
+    VkDeviceSize bufferSize = sizeof(indices[0]) * size;
+    VkDeviceSize bufferOffset = sizeof(indices[0]) * start;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -1063,14 +1074,14 @@ void VulkanUtil::createIndexBuffer(bool update) {
 
     void *data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), (size_t)bufferSize);
+    memcpy(data, indices.data() + start, (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
     if (!update) {
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
     }
 
-    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+    copyBuffer(stagingBuffer, indexBuffer, bufferOffset, bufferSize);
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
@@ -1210,10 +1221,11 @@ void VulkanUtil::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
     vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 }
 
-void VulkanUtil::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+void VulkanUtil::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize size) {
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
     VkBufferCopy copyRegion{};
+    copyRegion.dstOffset = dstOffset;
     copyRegion.size = size;
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
@@ -1280,7 +1292,7 @@ void VulkanUtil::createCommandBuffers() {
 
         vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 
-        vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffers[i], indexCount, 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffers[i]);
 
