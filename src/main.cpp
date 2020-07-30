@@ -239,8 +239,8 @@ class App {
     float fallVel = 0.0f;
     float walkVel = 2.0f;
     bool flying = false;
-    glm::vec3 loc = glm::vec3(CHUNK_SIZE_XZUV / 2, CHUNK_SIZE_Y / 2 + 3, CHUNK_SIZE_XZUV / 2);
-    glm::vec2 uv = glm::vec2(CHUNK_SIZE_XZUV / 2, CHUNK_SIZE_XZUV / 2);
+    glm::vec3 loc = glm::vec3(CHUNK_SIZE_XZUV / 2 + 0.5f, CHUNK_SIZE_Y / 2 + 3, CHUNK_SIZE_XZUV / 2 + 0.5f);
+    glm::vec2 uv = glm::vec2(CHUNK_SIZE_XZUV / 2 + 0.5f, CHUNK_SIZE_XZUV / 2 + 0.5f);
     glm::vec3 lookHeading = glm::vec3(1.0f, 0.0f, 0.0f);
     float lookAltitude = 0.0f;
     float height = 1.75f;
@@ -360,15 +360,16 @@ class App {
         // Snap hidden dimensions
         if (!uvTravel) {
             if (uvView < 0.5f) {
-                glm::vec2 rounded = glm::round(uv);
+                glm::vec2 rounded = glm::round(uv - 0.5f) + 0.5f;
                 if (glm::length(uv - rounded) < 0.01f) {
                     uv = rounded;
                 } else {
-                    uv = 0.1f * rounded + 0.9f * uv;
+                    float alpha = glm::exp(-time * 7.0f / ANIMATION_TIME);
+                    uv = (1.0f - alpha) * rounded + alpha * uv;
                 }
             } else {
                 glm::vec2 hide = glm::vec2(loc.x, loc.z);
-                glm::vec2 rounded = glm::round(hide);
+                glm::vec2 rounded = glm::round(hide - 0.5f) + 0.5f;
                 if (glm::length(hide - rounded) < 0.01f) {
                     loc.x = rounded.x;
                     loc.z = rounded.y;

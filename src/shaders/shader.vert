@@ -34,12 +34,12 @@ void main() {
         inShow = inXYZ;
         inHide = inUV;
         eyeShow = ubo.xyz;
-        eyeHide = ubo.uv;
+        eyeHide = ubo.uv - 0.5f;
     } else {
         inShow = vec3(inUV.x, inXYZ.y, inUV.y);
         inHide = inXYZ.xz;
         eyeShow = vec3(ubo.uv.x, ubo.xyz.y, ubo.uv.y);
-        eyeHide = ubo.xyz.xz;
+        eyeHide = ubo.xyz.xz - 0.5f;
     }
     vec2 eyeHideFloor = floor(eyeHide);
     vec2 eyeHideFrac = eyeHide - eyeHideFloor;
