@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <map>
-#include <sqlite3.h> 
+#include <sqlite3.h>
 
 #include "VulkanUtil.hpp"
 
@@ -22,13 +22,17 @@ const int CHUNK_SIZE_XZUV = 4;
 const int CHUNK_SIZE_Y = 8;
 const int CHUNK_SIZE = CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y;
 const int TEX_WIDTH = 2;
+const int MAX_INDIVIDUAL_CHANGES = 50;
 
 struct CellLoc {
-    int x;
-    int y;
-    int z;
-    int u;
-    int v;
+    CellLoc();
+    CellLoc(glm::vec3 xyz, glm::vec2 uv);
+    CellLoc(int x, int y, int z, int u, int v);
+    int x = 0;
+    int y = 0;
+    int z = 0;
+    int u = 0;
+    int v = 0;
 };
 
 struct ChunkLoc {
@@ -48,13 +52,10 @@ typedef int Cell;
 typedef CellLoc RelativeCellLoc;
 
 struct Chunk {
+    Chunk();
     std::vector<Cell> cells;
-    std::vector<int> squareLocations;
     Cell & operator[](const RelativeCellLoc loc);
 };
-
-
-
 
 namespace std {
 template <>
@@ -81,39 +82,41 @@ class World {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
-    Cell getCell(CellLoc loc);
-    Cell getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc);
-
-    void setCell(CellLoc loc, Cell cellData);
-
-    void setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData);
-
-    void loadChunk(ChunkLoc loc);
-
-    void unloadChunk(ChunkLoc loc);
-
-    void saveChunk(ChunkLoc loc);
-
-    void generateChunk(ChunkLoc loc);
-
-    World(VulkanUtil vulkan);
-
+    World(VulkanUtil *vulkan);
+    World(VulkanUtil *vulkan, std::string dirname);
     ~World();
 
-    World(VulkanUtil vulkan, std::string dirname);
+    void init();
+
+    Cell getCell(CellLoc loc);
+    Cell getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc);
+    void setCell(CellLoc loc, Cell cellData);
+    void setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData, bool sendVertices);
+
+    void loadChunk(ChunkLoc loc);
+    void unloadChunk(ChunkLoc loc);
+    void saveChunk(ChunkLoc loc);
+    void generateChunk(ChunkLoc loc);
+
+    void sendVerticesAndIndicesToVulkan();
+
+    void printStats();
 
    private:
-    VulkanUtil vulkan;
+    VulkanUtil *vulkan;
     bool running = false;
     std::unordered_map<Vertex, uint32_t> uniqueVertices;
     std::unordered_map<ChunkLoc, Chunk> chunks;
     std::map<SideIndex, size_t> sideIndices;
+    std::vector<size_t> emptySideIndices;
     std::string dirname;
 
     int indicesIndex;
     int verticesIndex;
 
-    void init();
+    std::vector<size_t> changedIndices;
+    std::vector<size_t> changedVertices;
+
     void destroy();
 
     void writeFile(int startLoc, void* data, int size);
@@ -123,8 +126,6 @@ class World {
     void removeSide(CellLoc loc, int side);
 
     void addVertex(const Vertex &vertex);
-
-    void sendVerticesAndIndicesToVulkan();
 
     void filterVertexArrayWithinChunk(ChunkLoc loc);
 

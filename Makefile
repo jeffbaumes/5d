@@ -16,6 +16,7 @@ else
 endif
 
 CFLAGS = -std=c++17 -I$(VULKAN_SDK_PATH)/include -Ilib/vendor -g
+# CFLAGS = -std=c++17 -I$(VULKAN_SDK_PATH)/include -Ilib/vendor -O3 -DNDEBUG
 LDFLAGS = -L$(VULKAN_SDK_PATH)/lib `pkg-config --static --libs glfw3` -lvulkan
 
 HFILES = src/VulkanUtil.hpp src/World.hpp

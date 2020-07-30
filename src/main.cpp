@@ -45,10 +45,9 @@ class App {
    private:
     GLFWwindow *window;
     VulkanUtil vulkan;
-    World world = World(vulkan);
+    World world = World(&vulkan);
     std::vector<int> cells;
     std::map<SideIndex, size_t> sideIndices;
-    int size = 8;
     std::unordered_map<Vertex, uint32_t> uniqueVertices;
     long vertexIndex = 0;
     long indexIndex = 0;
@@ -81,7 +80,29 @@ class App {
     }
 
     void initWorld() {
-        world.loadChunk({0, 0, 0, 0, 0});
+        world.init();
+        int size = 2;
+        for (int x = -size; x <= size; x += 1) {
+            for (int z = -size; z <= size; z += 1) {
+                for (int u = -size; u <= size; u += 1) {
+                    for (int v = -size; v <= size; v += 1) {
+                        std::cerr << x << "," << z << "," << u << "," << v << std::endl;
+                        world.loadChunk({x, 0, z, u, v});
+                    }
+                }
+            }
+        }
+        // world.loadChunk({0, 0, 0, 0, 0});
+        // world.loadChunk({1, 0, 0, 0, 0});
+        // world.loadChunk({-1, 0, 0, 0, 0});
+        // world.loadChunk({0, 0, 1, 0, 0});
+        // world.loadChunk({0, 0, -1, 0, 0});
+        // world.loadChunk({0, 0, 0, 1, 0});
+        // world.loadChunk({0, 0, 0, -1, 0});
+        // world.loadChunk({0, 0, 0, 0, 1});
+        // world.loadChunk({0, 0, 0, 0, -1});
+        world.printStats();
+        world.sendVerticesAndIndicesToVulkan();
     }
 
     static void framebufferResizeCallback(GLFWwindow *window, int width, int height) {
@@ -97,17 +118,15 @@ class App {
                 app->cursorLocked = true;
                 app->firstMousePosition = true;
             } else {
-                auto cell = app->focusedCell;
-                auto cellUV = app->focusedCellUV;
-                app->world.setCell({cell.x, cell.y, cell.z, cellUV.x, cellUV.y}, 0);
+                app->world.setCell(app->focusedCell, 0);
+                app->world.sendVerticesAndIndicesToVulkan();
             }
         }
 
         if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
             if (app->cursorLocked) {
-                auto cell = app->buildCell;
-                auto cellUV = app->buildCellUV;
-                app->world.setCell({cell.x, cell.y, cell.z, cellUV.x, cellUV.y}, app->buildMat);
+                app->world.setCell(app->buildCell, app->buildMat);
+                app->world.sendVerticesAndIndicesToVulkan();
             }
         }
     }
@@ -140,7 +159,11 @@ class App {
             } else if (key == GLFW_KEY_V) {
                 app->uvViewTarget = 1.0 - app->uvViewTarget;
             } else if (key == GLFW_KEY_SPACE) {
-                app->holdingJump = true;
+                if (!app->flying) {
+                    app->holdingJump = true;
+                } else {
+                    app->upVel = app->walkVel;
+                }
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
                 app->uvTravel = true;
                 app->oldUv = app->uv;
@@ -153,6 +176,12 @@ class App {
                 app->buildMat = 2;
             } else if (key == GLFW_KEY_3) {
                 app->buildMat = 3;
+            } else if (key == GLFW_KEY_G) {
+                app->flying = !app->flying;
+            } else if (key == GLFW_KEY_Z) {
+                if (app->flying) {
+                    app->downVel = app->walkVel;
+                }
             }
         } else if (action == GLFW_RELEASE) {
             if (key == GLFW_KEY_W) {
@@ -168,6 +197,8 @@ class App {
                 app->upVel = 0.0f;
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
                 app->uvTravel = false;
+            } else if (key == GLFW_KEY_Z) {
+                app->downVel = 0.0f;
             }
         }
     }
@@ -206,19 +237,18 @@ class App {
     bool uvTravel = false;
     float fallVel = 0.0f;
     float walkVel = 2.0f;
-    glm::vec3 loc = glm::vec3(size / 2, size / 2 + 3, size / 2);
-    glm::vec2 uv = glm::vec2(size / 2, size / 2);
+    bool flying = false;
+    glm::vec3 loc = glm::vec3(CHUNK_SIZE_XZUV / 2, CHUNK_SIZE_Y / 2 + 3, CHUNK_SIZE_XZUV / 2);
+    glm::vec2 uv = glm::vec2(CHUNK_SIZE_XZUV / 2, CHUNK_SIZE_XZUV / 2);
     glm::vec3 lookHeading = glm::vec3(1.0f, 0.0f, 0.0f);
     float lookAltitude = 0.0f;
     float height = 1.75f;
     float radius = 0.25f;
-    glm::vec2 oldUv = glm::vec2(size / 2, size / 2);
+    glm::vec2 oldUv = glm::vec2(CHUNK_SIZE_XZUV / 2, CHUNK_SIZE_XZUV / 2);
     bool holdingJump = false;
     bool inJump = false;
-    glm::vec3 focusedCell = glm::vec3(0, 0, 0);
-    glm::vec2 focusedCellUV = glm::vec2(0, 0);
-    glm::vec3 buildCell = glm::vec3(0, 0, 0);
-    glm::vec2 buildCellUV = glm::vec2(0, 0);
+    CellLoc focusedCell;
+    CellLoc buildCell;
     float uvView = 0.0f;
     float uvViewTarget = 0.0f;
 
@@ -260,7 +290,7 @@ class App {
         glm::vec2 cellUV = glm::floor(uv) + glm::vec2(0.5f, 0.5f);
         glm::vec3 adjCell = cell + d;
         glm::vec2 adjCellUV = cellUV + dUV;
-        int material = world.getCell({adjCell.x, adjCell.y, adjCell.z, adjCellUV.x, adjCellUV.y});
+        int material = world.getCell({adjCell, adjCellUV});
         if (material != 0) {
             if (y != 0) {
                 // TODO
@@ -298,8 +328,8 @@ class App {
         glm::vec3 up(0.0f, 1.0f, 0.0f);
         glm::vec3 right = glm::cross(lookHeading, up);
         glm::vec3 feet = loc - (up * height);
-        int feetCell = world.getCell({floor(feet.x), floor(feet.y), floor(feet.z), floor(uv.x), floor(uv.y)});
-        bool falling = feetCell == 0;
+        int feetCell = world.getCell({feet, uv});
+        bool falling = feetCell == 0 && !flying;
         // bool falling = feet.y > size / 2;
         if (falling) {
             fallVel -= 20.0f * time;
@@ -312,6 +342,9 @@ class App {
         }
 
         glm::vec3 playerVel = up * fallVel;
+        if (flying) {
+            playerVel = up * (upVel - downVel);
+        }
         playerVel = playerVel + lookHeading * (forwardVel - backVel);
         playerVel = playerVel + right * (rightVel - leftVel);
 
@@ -345,17 +378,19 @@ class App {
             }
         }
 
-        for (float h = 0.5f; h < height; h += 1.0f) {
-            collide(h, 1, 0, 0, 0, 0);
-            collide(h, -1, 0, 0, 0, 0);
-            // collide(h, 0, 1, 0, 0, 0);
-            // collide(h, 0, -1, 0, 0, 0);
-            collide(h, 0, 0, 1, 0, 0);
-            collide(h, 0, 0, -1, 0, 0);
-            collide(h, 0, 0, 0, 1, 0);
-            collide(h, 0, 0, 0, -1, 0);
-            collide(h, 0, 0, 0, 0, 1);
-            collide(h, 0, 0, 0, 0, -1);
+        if (!flying) {
+            for (float h = 0.5f; h < height; h += 1.0f) {
+                collide(h, 1, 0, 0, 0, 0);
+                collide(h, -1, 0, 0, 0, 0);
+                // collide(h, 0, 1, 0, 0, 0);
+                // collide(h, 0, -1, 0, 0, 0);
+                collide(h, 0, 0, 1, 0, 0);
+                collide(h, 0, 0, -1, 0, 0);
+                collide(h, 0, 0, 0, 1, 0);
+                collide(h, 0, 0, 0, -1, 0);
+                collide(h, 0, 0, 0, 0, 1);
+                collide(h, 0, 0, 0, 0, -1);
+            }
         }
 
 
@@ -368,23 +403,19 @@ class App {
         // glm::vec3 increment = lookDir() * glm::vec3(0.05, 1, 1);
         glm::vec3 increment = lookDir() * 0.05f;
         glm::vec3 pos = loc;
-        focusedCell = glm::vec3(0, 0, 0);
-        focusedCellUV = glm::vec2(0, 0);
-        glm::vec3 prevCell = glm::vec3(0, 0, 0);
-        glm::vec2 prevCellUV = glm::vec2(0, 0);
+        focusedCell = {};
+        CellLoc prevCell;
         for (int i = 0; i < 100; i++) {
             pos = pos + increment;
             glm::vec3 floorpos = glm::floor(pos);
-            int cell = world.getCell({floorpos.x, floorpos.y, floorpos.z, floor(uv.x), floor(uv.y)});
+            CellLoc cellLoc = {floorpos, uv};
+            int cell = world.getCell(cellLoc);
             if (cell != 0) {
-                focusedCell = floorpos;
-                focusedCellUV = glm::floor(uv);
+                focusedCell = cellLoc;
                 buildCell = prevCell;
-                buildCellUV = prevCellUV;
                 break;
             }
-            prevCell = floorpos;
-            prevCellUV = glm::floor(uv);
+            prevCell = {floorpos, uv};
 	    }
     }
 
@@ -439,12 +470,12 @@ class App {
 int main() {
     App app;
 
-    try {
-        app.run();
-    } catch (const std::exception &e) {
-        std::cerr << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
+    // try {
+    app.run();
+    // } catch (const std::exception &e) {
+    //     std::cerr << e.what() << std::endl;
+    //     return EXIT_FAILURE;
+    // }
 
     return EXIT_SUCCESS;
 }
