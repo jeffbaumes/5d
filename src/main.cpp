@@ -28,6 +28,7 @@
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
+const float ANIMATION_TIME = 2.0f;
 
 typedef std::array<int, 6> SideIndex;
 
@@ -81,7 +82,7 @@ class App {
 
     void initWorld() {
         world.init();
-        int size = 2;
+        int size = 1;
         for (int x = -size; x <= size; x += 1) {
             for (int z = -size; z <= size; z += 1) {
                 for (int u = -size; u <= size; u += 1) {
@@ -372,8 +373,9 @@ class App {
                     loc.x = rounded.x;
                     loc.z = rounded.y;
                 } else {
-                    loc.x = 0.1f * rounded.x + 0.9f * hide.x;
-                    loc.z = 0.1f * rounded.y + 0.9f * hide.y;
+                    float alpha = glm::exp(-time * 7.0f / ANIMATION_TIME);
+                    loc.x = (1.0f - alpha) * rounded.x + alpha * hide.x;
+                    loc.z = (1.0f - alpha) * rounded.y + alpha * hide.y;
                 }
             }
         }
@@ -455,11 +457,8 @@ class App {
         if (glm::abs(uvViewTarget - uvView) < 0.01f) {
             uvView = uvViewTarget;
         } else {
-            // Linear travel
-            // uvView = uvView + 0.01f * (uvViewTarget - uvView);
-
-            // Exponential travel
-            uvView = 0.05f * uvViewTarget + 0.95f * uvView;
+            float alpha = glm::exp(-timeDelta * 7.0f / ANIMATION_TIME);
+            uvView = (1.0f - alpha) * uvViewTarget + alpha * uvView;
         }
         ubo.uvView = uvView;
 
