@@ -13,6 +13,14 @@ CellLoc::CellLoc() {
     v = 0;
 }
 
+CellLoc::CellLoc(vec5 loc) {
+    x = static_cast<int>(glm::floor(loc.x));
+    y = static_cast<int>(glm::floor(loc.y));
+    z = static_cast<int>(glm::floor(loc.z));
+    u = static_cast<int>(glm::floor(loc.u));
+    v = static_cast<int>(glm::floor(loc.v));
+}
+
 CellLoc::CellLoc(glm::vec3 xyz, glm::vec2 uv) {
     x = static_cast<int>(glm::floor(xyz.x));
     y = static_cast<int>(glm::floor(xyz.y));

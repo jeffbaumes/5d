@@ -82,7 +82,7 @@ class App {
 
     void initWorld() {
         world.init();
-        int size = 1;
+        int size = 0;
         for (int x = -size; x <= size; x += 1) {
             for (int z = -size; z <= size; z += 1) {
                 for (int u = -size; u <= size; u += 1) {
@@ -93,15 +93,6 @@ class App {
                 }
             }
         }
-        // world.loadChunk({0, 0, 0, 0, 0});
-        // world.loadChunk({1, 0, 0, 0, 0});
-        // world.loadChunk({-1, 0, 0, 0, 0});
-        // world.loadChunk({0, 0, 1, 0, 0});
-        // world.loadChunk({0, 0, -1, 0, 0});
-        // world.loadChunk({0, 0, 0, 1, 0});
-        // world.loadChunk({0, 0, 0, -1, 0});
-        // world.loadChunk({0, 0, 0, 0, 1});
-        // world.loadChunk({0, 0, 0, 0, -1});
         world.printStats();
         world.sendVerticesAndIndicesToVulkan();
     }
@@ -253,6 +244,28 @@ class App {
     float uvView = 0.0f;
     float uvViewTarget = 0.0f;
 
+    float dot(vec5 a, vec5 b) {
+        return a.x * b.x + a.y * b.y + a.z * b.z + a.u * b.u + a.v * b.v;
+    }
+
+    vec5 normalize(vec5 a) {
+        float len = glm::sqrt(dot(a, a));
+        return a / len;
+    }
+
+    vec5 project(vec5 a, vec5 b) {
+        vec5 bn = normalize(b);
+        return bn * dot(a, bn);
+    }
+
+    vec5 round(vec5 a) {
+        return {glm::round(a.x), glm::round(a.y), glm::round(a.z), glm::round(a.u), glm::round(a.v)};
+    }
+
+    vec5 floor(vec5 a) {
+        return {glm::floor(a.x), glm::floor(a.y), glm::floor(a.z), glm::floor(a.u), glm::floor(a.v)};
+    }
+
     glm::vec3 project(glm::vec3 a, glm::vec3 b) {
         glm::vec3 bn = glm::normalize(b);
         return bn * glm::dot(a, bn);
@@ -283,43 +296,25 @@ class App {
     }
 
     void collide(float h, int x, int y, int z, int u, int v) {
-        glm::vec3 up(0.0f, 1.0f, 0.0f);
-        glm::vec3 pos = loc - (up * (height - h));
-        glm::vec3 d = glm::vec3(x, y, z);
-        glm::vec2 dUV = glm::vec2(u, v);
-        glm::vec3 cell = glm::floor(pos) + glm::vec3(0.5f, 0.5f, 0.5f);
-        glm::vec2 cellUV = glm::floor(uv) + glm::vec2(0.5f, 0.5f);
-        glm::vec3 adjCell = cell + d;
-        glm::vec2 adjCellUV = cellUV + dUV;
-        int material = world.getCell({adjCell, adjCellUV});
+        vec5 pos = {loc.x, loc.y - (height - h), loc.z, uv.x, uv.y};
+        vec5 d = {static_cast<float>(x), static_cast<float>(y), static_cast<float>(z), static_cast<float>(u), static_cast<float>(v)};
+        vec5 cell = floor(pos) + 0.5f;
+        vec5 adjCell = cell + d;
+        int material = world.getCell({adjCell});
         if (material != 0) {
             if (y != 0) {
                 // TODO
             } else {
-                if (u != 0 || v != 0) {
-                    cell.x = cellUV.x;
-                    cell.z = cellUV.y;
-                    d.x = dUV.x;
-                    d.z = dUV.y;
-                    pos.x = uv.x;
-                    pos.z = uv.y;
-                }
-                glm::vec3 nLoc = cell + d / 2.0f;
-                glm::vec3 aLoc = cell + d;
-                glm::vec3 cNorm = glm::normalize(nLoc - aLoc);
-                cNorm = glm::normalize(cNorm - project(cNorm, up));
-                float dist2Plane = glm::dot(cNorm, pos - nLoc);
+                vec5 nLoc = cell + d / 2.0f;
+                vec5 aLoc = cell + d;
+                vec5 cNorm = normalize(nLoc - aLoc);
+                cNorm = normalize(cNorm - project(cNorm, {0, 1, 0, 0, 0}));
+                float dist2Plane = dot(cNorm, pos - nLoc);
                 if (dist2Plane < radius) {
                     float move = radius - dist2Plane;
                     cNorm = cNorm * move;
-                    if (u != 0 || v != 0) {
-                        if (uvTravel) {
-                            uv = uv + glm::vec2(cNorm.x, cNorm.z);
-                        }
-                        loc.y = loc.y + cNorm.y;
-                    } else {
-                        loc = loc + cNorm;
-                    }
+                    loc = loc + cNorm.xyz();
+                    uv = uv + cNorm.uv();
                 }
             }
         }
@@ -382,6 +377,9 @@ class App {
         }
 
         if (!flying) {
+            // if (collide(2)) {
+            //     fallVel = 0.0f;
+            // }
             for (float h = 0.5f; h < height; h += 1.0f) {
                 collide(h, 1, 0, 0, 0, 0);
                 collide(h, -1, 0, 0, 0, 0);
@@ -396,29 +394,29 @@ class App {
             }
         }
 
-
-        // std::cout << loc.x << "," << loc.y << "," << loc.z << "," << uv.x << "," << uv.y << std::endl;
-        // std::cout << oldUv.x << "," << oldUv.y << std::endl;
-        // std::cout << uv.x << "," << uv.y << std::endl;
-
-
-        // TODO: Update focused cell here
-        // glm::vec3 increment = lookDir() * glm::vec3(0.05, 1, 1);
-        glm::vec3 increment = lookDir() * 0.05f;
-        glm::vec3 pos = loc;
+        glm::vec3 look = lookDir();
+        vec5 increment = {0.0, look.y, 0.0, 0.0, 0.0};
+        if (uvView < 0.5f) {
+            increment.x = look.x;
+            increment.z = look.z;
+        } else {
+            increment.u = look.x;
+            increment.v = look.z;
+        }
+        increment = increment * 0.05f;
+        vec5 pos = {loc.x, loc.y, loc.z, uv.x, uv.y};
         focusedCell = {};
         CellLoc prevCell;
         for (int i = 0; i < 100; i++) {
             pos = pos + increment;
-            glm::vec3 floorpos = glm::floor(pos);
-            CellLoc cellLoc = {floorpos, uv};
+            CellLoc cellLoc = {pos};
             int cell = world.getCell(cellLoc);
             if (cell != 0) {
                 focusedCell = cellLoc;
                 buildCell = prevCell;
                 break;
             }
-            prevCell = {floorpos, uv};
+            prevCell = {pos};
 	    }
     }
 
