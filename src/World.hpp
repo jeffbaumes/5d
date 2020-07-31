@@ -19,7 +19,7 @@ struct ChunkNotLoadedException : public std::exception
 
 
 const int CHUNK_SIZE_XZUV = 4;
-const int CHUNK_SIZE_Y = 8;
+const int CHUNK_SIZE_Y = 16;
 const int CHUNK_SIZE = CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y;
 const int TEX_WIDTH = 2;
 const int MAX_INDIVIDUAL_CHANGES = 50;

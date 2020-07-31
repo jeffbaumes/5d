@@ -14,11 +14,9 @@ layout(binding = 0) uniform UniformBufferObject {
     float uvView;
 } ubo;
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inXYZ;
-layout(location = 2) in vec2 inUV;
-layout(location = 3) in vec2 texCord;
-layout(location = 4) in vec3 face;
+layout(location = 0) in uint inPos;
+layout(location = 1) in ivec3 inXYZ;
+layout(location = 2) in ivec2 inUV;
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
@@ -26,6 +24,28 @@ layout(location = 2) out vec2 fragPosition;
 
 
 void main() {
+    ivec3 inPosition = ivec3((inPos / 4) % 2, (inPos / 2) % 2, inPos % 2);
+    int face = int((inPos / 8) % 8) - 3;
+    int material = int(inPos / 64);
+    float a2 = 0.0001;
+    int TEX_WIDTH = 2;
+    vec2 materialTexCoord = vec2(
+        ((material - 1) % TEX_WIDTH) / float(TEX_WIDTH) + a2,
+        ((material - 1) / TEX_WIDTH) / float(TEX_WIDTH) + a2
+    );
+    float a = 1.0 / float(TEX_WIDTH) - 2.0 * a2;
+    vec2 texCoord;
+    if (abs(face) == 1) {
+        texCoord.x = materialTexCoord.x + inPosition.y * a;
+        texCoord.y = materialTexCoord.y + inPosition.z * a;
+    } else if (abs(face) == 2) {
+        texCoord.x = materialTexCoord.x + inPosition.x * a;
+        texCoord.y = materialTexCoord.y + inPosition.z * a;
+    } else if (abs(face) == 3) {
+        texCoord.x = materialTexCoord.x + inPosition.x * a;
+        texCoord.y = materialTexCoord.y + inPosition.y * a;
+    }
+
     vec3 inShow;
     vec2 inHide;
     vec3 eyeShow;
@@ -45,41 +65,41 @@ void main() {
     vec2 eyeHideFrac = eyeHide - eyeHideFloor;
     vec3 frac = vec3(eyeHideFrac.x, 0.0, eyeHideFrac.y);
     vec3 pos = vec3(1000000.0, inPosition.y, 0.0);
-    vec2 tex = texCord;
+    vec2 tex = texCoord;
     float area = 0.0;
     if (inHide == eyeHideFloor) {
         pos.x = inPosition.x - frac.x;
         pos.z = inPosition.z - frac.z;
-        if (face.x == -1.0) {
+        if (face == -1) {
             pos.x = 0.001;
-        } else if (face.z == -1.0) {
+        } else if (face == -3) {
             pos.z = 0.001;
         }
         area = (1.0 - frac.x) * (1.0 - frac.z);
     } else if (inHide == eyeHideFloor + vec2(1.0, 0.0) && eyeHide != eyeHideFloor) {
         pos.x = inPosition.x - frac.x + 1.0;
         pos.z = inPosition.z - frac.z;
-        if (face.x == 1.0) {
+        if (face == 1) {
             pos.x = 0.999;
-        } else if (face.z == -1.0) {
+        } else if (face == -3) {
             pos.z = 0.001;
         }
         area = frac.x * (1.0 - frac.z);
     } else if (inHide == eyeHideFloor + vec2(0.0, 1.0) && eyeHide != eyeHideFloor) {
         pos.x = inPosition.x - frac.x;
         pos.z = inPosition.z - frac.z + 1.0;
-        if (face.x == -1.0) {
+        if (face == -1) {
             pos.x = 0.001;
-        } else if (face.z == 1.0) {
+        } else if (face == 3) {
             pos.z = 0.999;
         }
         area = (1.0 - frac.x) * frac.z;
     } else if (inHide == eyeHideFloor + vec2(1.0, 1.0) && eyeHide != eyeHideFloor) {
         pos.x = inPosition.x - frac.x + 1.0;
         pos.z = inPosition.z - frac.z + 1.0;
-        if (face.x == 1.0) {
+        if (face == 1) {
             pos.x = 0.999;
-        } else if (face.z == 1.0) {
+        } else if (face == 3) {
             pos.z = 0.999;
         }
         area = frac.x * frac.z;

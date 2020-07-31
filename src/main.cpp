@@ -125,7 +125,6 @@ class App {
                     for (int v = -size; v <= size; v += 1) {
                         std::cerr << x << "," << z << "," << u << "," << v << std::endl;
                         world.loadChunk({x, 0, z, u, v});
-                        world.saveChunk({x, 0, z, u, v});
                     }
                 }
             }

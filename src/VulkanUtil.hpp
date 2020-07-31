@@ -60,15 +60,13 @@ struct SwapChainSupportDetails {
 };
 
 struct Vertex {
-    glm::vec3 pos;
-    glm::vec3 color;
-    glm::vec2 UV;
-    glm::vec2 texCoord;
-    glm::vec3 face;
+    uint16_t pos;
+    glm::i16vec3 xyz;
+    glm::i16vec2 uv;
 
     static VkVertexInputBindingDescription getBindingDescription();
 
-    static std::array<VkVertexInputAttributeDescription, 5> getAttributeDescriptions();
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
 
     bool operator==(const Vertex &other) const;
 };
@@ -77,16 +75,12 @@ namespace std {
 template <>
 struct hash<Vertex> {
     size_t operator()(Vertex const &vertex) const {
-        size_t h1 = hash<glm::vec3>()(vertex.pos);
-        size_t h2 = hash<glm::vec3>()(vertex.color);
-        size_t h3 = hash<glm::vec2>()(vertex.texCoord);
-        size_t h4 = hash<glm::vec2>()(vertex.UV);
-        size_t h5 = hash<glm::vec3>()(vertex.face);
+        size_t h1 = hash<uint16_t>()(vertex.pos);
+        size_t h2 = hash<glm::i16vec3>()(vertex.xyz);
+        size_t h3 = hash<glm::i16vec2>()(vertex.uv);
 
         size_t h = h1 ^ (h2 << 1);
         h = h ^ (h3 << 1);
-        h = h ^ (h4 << 1);
-        h = h ^ (h5 << 1);
 
         return h;
     }

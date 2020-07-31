@@ -158,6 +158,7 @@ void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData
     //         }
     //     }
     // }
+    // return;
 
     // Smarter algorithm
 
@@ -329,7 +330,7 @@ void World::generateChunk(ChunkLoc loc) {
                 for (int u = 0; u < CHUNK_SIZE_XZUV; u += 1) {
                     for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
                         // setCellInChunk(loc, {x, y, z, u, v}, rand() % 3, false);
-                        if (y < 4) {
+                        if (y < CHUNK_SIZE_Y / 2) {
                             int material = rand() % 2 + 1;
                             setCellInChunk(loc, {x, y, z, u, v}, material, false);
                         }
@@ -367,8 +368,9 @@ World::World(VulkanUtil *vulkan, std::string dirname) {
 }
 
 void World::init() {
-    vertices.resize(300 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 4, {{0, 0, 0}, {0, 0, 0}, {0, 0}});
-    indices.resize(300 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 6, 0);
+    vertices.resize(100 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 4, {0, {0, 0, 0}, {0, 0}});
+    indices.resize(100 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 6, 0);
+    std::cerr << sizeof(vertices[0]) << std::endl;
 
     verticesIndex++;
 }
@@ -407,18 +409,16 @@ void World::createSide(CellLoc loc, int side) {
 
     Cell mat = getCell(loc);
 
-    glm::vec3 xyz = glm::vec3(loc.x, loc.y, loc.z);
-    glm::vec2 uv = glm::vec2(loc.u, loc.v);
+    auto xyz = glm::i16vec3(loc.x, loc.y, loc.z);
+    auto uv = glm::i16vec2(loc.u, loc.v);
 
-    float a2 = 0.0001;
-    glm::vec2 texCord = glm::vec2(((mat - 1) % TEX_WIDTH) / (double)TEX_WIDTH + a2, ((mat - 1) / TEX_WIDTH) / (double)TEX_WIDTH + a2);
-    float a = 1.0 / TEX_WIDTH - 2.0 * a2;
+    uint16_t sp = ((mat << 3) + side + 3) << 3;
 
     if (side == -3) {
-        vertices[verticesIndex + 0] = {{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}};
-        vertices[verticesIndex + 1] = {{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 0, -1}};
-        vertices[verticesIndex + 2] = {{1, 0, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, 0, -1}};
-        vertices[verticesIndex + 3] = {{0, 1, 0}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, 0, -1}};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 6), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 4), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 2), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -426,10 +426,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 3;
         indices[indicesIndex + 5] = verticesIndex + 1;
     } else if (side == 3) {
-        vertices[verticesIndex + 0] = {{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}};
-        vertices[verticesIndex + 1] = {{1, 0, 1}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, 0, 1}};
-        vertices[verticesIndex + 2] = {{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 0, 1}};
-        vertices[verticesIndex + 3] = {{0, 1, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, 0, 1}};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 1), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 5), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 7), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 3), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -437,10 +437,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 2;
         indices[indicesIndex + 5] = verticesIndex + 3;
     } else if (side == -1) {
-        vertices[verticesIndex + 0] = {{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}};
-        vertices[verticesIndex + 1] = {{0, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {-1, 0, 0}};
-        vertices[verticesIndex + 2] = {{0, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {-1, 0, 0}};
-        vertices[verticesIndex + 3] = {{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {-1, 0, 0}};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 3), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 2), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 1), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -448,10 +448,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 3;
         indices[indicesIndex + 5] = verticesIndex + 1;
     } else if (side == 1) {
-        vertices[verticesIndex + 0] = {{1, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}};
-        vertices[verticesIndex + 1] = {{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {1, 0, 0}};
-        vertices[verticesIndex + 2] = {{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {1, 0, 0}};
-        vertices[verticesIndex + 3] = {{1, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {1, 0, 0}};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 4), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 6), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 7), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 5), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -459,10 +459,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 2;
         indices[indicesIndex + 5] = verticesIndex + 3;
     } else if (side == -2) {
-        vertices[verticesIndex + 0] = {{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}};
-        vertices[verticesIndex + 1] = {{1, 0, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, -1, 0}};
-        vertices[verticesIndex + 2] = {{1, 0, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, -1, 0}};
-        vertices[verticesIndex + 3] = {{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, -1, 0}};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 4), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 5), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 1), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -470,10 +470,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 2;
         indices[indicesIndex + 5] = verticesIndex + 3;
     } else if (side == 2) {
-        vertices[verticesIndex + 0] = {{0, 1, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}};
-        vertices[verticesIndex + 1] = {{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 1, 0}};
-        vertices[verticesIndex + 2] = {{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, 1, 0}};
-        vertices[verticesIndex + 3] = {{0, 1, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, 1, 0}};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 2), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 7), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 6), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 3), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -506,7 +506,7 @@ void World::removeSide(CellLoc loc, int side) {
         changedIndices.push_back(index);
 
         index = sideVertices[sideIndex];
-        for (size_t i = index; i < index + 6; i += 1) {
+        for (size_t i = index; i < index + 4; i += 1) {
             vertices[i] = {};
         }
         sideVertices.erase(sideIndex);
