@@ -132,6 +132,8 @@ class World {
     void setCell(CellLoc loc, Cell cellData);
     void setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData, bool sendVertices);
 
+    ChunkLoc chunkLocForCell(CellLoc loc);
+
     void loadChunk(ChunkLoc loc);
     void unloadChunk(ChunkLoc loc);
     void saveChunk(ChunkLoc loc);
@@ -144,10 +146,11 @@ class World {
    private:
     VulkanUtil *vulkan;
     bool running = false;
-    std::unordered_map<Vertex, uint32_t> uniqueVertices;
     std::unordered_map<ChunkLoc, Chunk> chunks;
     std::map<SideIndex, size_t> sideIndices;
+    std::map<SideIndex, size_t> sideVertices;
     std::vector<size_t> emptySideIndices;
+    std::vector<size_t> emptySideVertices;
     std::string dirname;
 
     int indicesIndex;
@@ -163,11 +166,6 @@ class World {
 
     void createSide(CellLoc loc, int side);
     void removeSide(CellLoc loc, int side);
-
-    void addVertex(const Vertex &vertex);
-
-    void filterVertexArrayWithinChunk(ChunkLoc loc);
-
 };
 
 #endif

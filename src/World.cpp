@@ -5,6 +5,34 @@
 #include <iostream>
 #include <stdexcept>
 
+/**
+ * Divide one integer by another, rounding towards minus infinity.
+ * @param x the dividend
+ * @param y the divisor
+ * @return the quoitant, rounded towards minus infinity
+ */
+int div_floor(int x, int y) {
+    int q = x / y;
+    int r = x % y;
+    if ((r != 0) && ((r < 0) != (y < 0))) --q;
+    return q;
+}
+
+/**
+ * Calculate the remainder after dividing one integer by another,
+ * rounding the quoitant towards minus infinity.
+ * @param x the dividend
+ * @param y the divisor
+ * @return the remainder
+ */
+int mod_floor(int x, int y) {
+    int r = x % y;
+    if ((r != 0) && ((r < 0) != (y < 0))) {
+        r += y;
+    }
+    return r;
+}
+
 CellLoc::CellLoc() {
     x = 0;
     y = 0;
@@ -50,35 +78,7 @@ bool ChunkLoc::operator==(const ChunkLoc& other) const {
     return x == other.x && y == other.y && z == other.z && u == other.u && v == other.v;
 }
 
-/**
- * Divide one integer by another, rounding towards minus infinity.
- * @param x the dividend
- * @param y the divisor
- * @return the quoitant, rounded towards minus infinity
- */
-int div_floor(int x, int y) {
-    int q = x / y;
-    int r = x % y;
-    if ((r != 0) && ((r < 0) != (y < 0))) --q;
-    return q;
-}
-
-/**
- * Calculate the remainder after dividing one integer by another,
- * rounding the quoitant towards minus infinity.
- * @param x the dividend
- * @param y the divisor
- * @return the remainder
- */
-int mod_floor(int x, int y) {
-    int r = x % y;
-    if ((r != 0) && ((r < 0) != (y < 0))) {
-        r += y;
-    }
-    return r;
-}
-
-Cell World::getCell(CellLoc loc) {
+ChunkLoc World::chunkLocForCell(CellLoc loc) {
     ChunkLoc chunkLoc;
     int size = CHUNK_SIZE_XZUV;
     chunkLoc.x = div_floor(loc.x, size);
@@ -86,13 +86,18 @@ Cell World::getCell(CellLoc loc) {
     chunkLoc.z = div_floor(loc.z, size);
     chunkLoc.u = div_floor(loc.u, size);
     chunkLoc.v = div_floor(loc.v, size);
+    return chunkLoc;
+}
+
+Cell World::getCell(CellLoc loc) {
+    ChunkLoc chunkLoc = chunkLocForCell(loc);
 
     RelativeCellLoc relCell;
-    relCell.x = mod_floor(loc.x, size);
+    relCell.x = mod_floor(loc.x, CHUNK_SIZE_XZUV);
     relCell.y = mod_floor(loc.y, CHUNK_SIZE_Y);
-    relCell.z = mod_floor(loc.z, size);
-    relCell.u = mod_floor(loc.u, size);
-    relCell.v = mod_floor(loc.v, size);
+    relCell.z = mod_floor(loc.z, CHUNK_SIZE_XZUV);
+    relCell.u = mod_floor(loc.u, CHUNK_SIZE_XZUV);
+    relCell.v = mod_floor(loc.v, CHUNK_SIZE_XZUV);
 
     return getCellInChunk(chunkLoc, relCell);
 }
@@ -109,20 +114,14 @@ Cell World::getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc relLoc) {
 }
 
 void World::setCell(CellLoc loc, Cell cellData) {
-    ChunkLoc chunkLoc;
-    int size = CHUNK_SIZE_XZUV;
-    chunkLoc.x = div_floor(loc.x, size);
-    chunkLoc.y = div_floor(loc.y, CHUNK_SIZE_Y);
-    chunkLoc.z = div_floor(loc.z, size);
-    chunkLoc.u = div_floor(loc.u, size);
-    chunkLoc.v = div_floor(loc.v, size);
+    ChunkLoc chunkLoc = chunkLocForCell(loc);
 
     RelativeCellLoc relCell = loc;
-    relCell.x = mod_floor(loc.x, size);
+    relCell.x = mod_floor(loc.x, CHUNK_SIZE_XZUV);
     relCell.y = mod_floor(loc.y, CHUNK_SIZE_Y);
-    relCell.z = mod_floor(loc.z, size);
-    relCell.u = mod_floor(loc.u, size);
-    relCell.v = mod_floor(loc.v, size);
+    relCell.z = mod_floor(loc.z, CHUNK_SIZE_XZUV);
+    relCell.u = mod_floor(loc.u, CHUNK_SIZE_XZUV);
+    relCell.v = mod_floor(loc.v, CHUNK_SIZE_XZUV);
 
     setCellInChunk(chunkLoc, relCell, cellData, true);
 }
@@ -133,11 +132,6 @@ void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData
     if (result == chunks.end()) {
         // throw ChunkNotLoadedException();
         std::cerr << "Chunk not loaded in setCellInChunk" << std::endl;
-        return;
-    }
-
-    Cell oldCellData = getCellInChunk(chunkLoc, loc);
-    if (cellData == oldCellData) {
         return;
     }
 
@@ -266,7 +260,7 @@ void World::loadChunk(ChunkLoc loc) {
 
     Chunk chunk;
 
-    file.read((char *) &chunk, sizeof(Chunk));
+    file.read((char *) chunk.cells.data(), sizeof(int) * chunk.cells.size());
 
     chunks[loc] = chunk;
 
@@ -308,8 +302,6 @@ void World::unloadChunk(ChunkLoc loc) {
             }
         }
     }
-
-    filterVertexArrayWithinChunk(loc);
 }
 
 void World::saveChunk(ChunkLoc loc) {
@@ -325,7 +317,7 @@ void World::saveChunk(ChunkLoc loc) {
     std::string filename = std::to_string(loc.x) + "-" + std::to_string(loc.y) + "-" + std::to_string(loc.z) + "-" + std::to_string(loc.u) + "-" + std::to_string(loc.v);
     std::ofstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
 
-    file.write((char *) &chunks[loc], sizeof(Chunk));
+    file.write((char *) chunks[loc].cells.data(), sizeof(chunks[loc].cells[0]) * chunks[loc].cells.size());
 
     file.close();
 }
@@ -356,11 +348,12 @@ void World::printStats() {
     std::cout << "Vertices per chunk: " << verticesIndex / chunks.size() << std::endl;
     std::cout << "Indices capacity: " << indices.size() << std::endl;
     std::cout << "Vertices capacity: " << vertices.size() << std::endl;
-    std::cout << "Empty side slots: " << emptySideIndices.size() << std::endl;
+    std::cout << "Empty side indices slots: " << emptySideIndices.size() << std::endl;
+    std::cout << "Empty side vertices slots: " << emptySideVertices.size() << std::endl;
 }
 
 World::World(VulkanUtil *vulkan) {
-    dirname = "world.db";
+    dirname = "world";
     this->vulkan = vulkan;
 }
 
@@ -374,8 +367,8 @@ World::World(VulkanUtil *vulkan, std::string dirname) {
 }
 
 void World::init() {
-    vertices.resize(625 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 4, {{0, 0, 0}, {0, 0, 0}, {0, 0}});
-    indices.resize(625 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 6, 0);
+    vertices.resize(300 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 4, {{0, 0, 0}, {0, 0, 0}, {0, 0}});
+    indices.resize(300 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 6, 0);
 
     verticesIndex++;
 }
@@ -384,24 +377,33 @@ void World::destroy() {
 }
 
 void World::createSide(CellLoc loc, int side) {
-
     SideIndex sideIndex = {loc.x, loc.y, loc.z, loc.u, loc.v, side};
 
     if (sideIndices.count(sideIndex)) {
         return;
     }
 
-    bool usingEmptySlot = false;
+    bool usingEmptyIndicesSlot = false;
     size_t originalIndicesIndex = indicesIndex;
     if (emptySideIndices.size() > 0) {
-        usingEmptySlot = true;
+        usingEmptyIndicesSlot = true;
         indicesIndex = emptySideIndices.back();
         emptySideIndices.pop_back();
     }
 
+    bool usingEmptyVerticesSlot = false;
+    size_t originalVerticesIndex = verticesIndex;
+    if (emptySideVertices.size() > 0) {
+        usingEmptyVerticesSlot = true;
+        verticesIndex = emptySideVertices.back();
+        emptySideVertices.pop_back();
+    }
+
     changedIndices.push_back(indicesIndex);
+    changedVertices.push_back(verticesIndex);
 
     sideIndices[sideIndex] = indicesIndex;
+    sideVertices[sideIndex] = verticesIndex;
 
     Cell mat = getCell(loc);
 
@@ -413,57 +415,88 @@ void World::createSide(CellLoc loc, int side) {
     float a = 1.0 / TEX_WIDTH - 2.0 * a2;
 
     if (side == -3) {
-        addVertex({{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
-        addVertex({{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
-        addVertex({{1, 0, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, 0, -1}});
-        addVertex({{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}});
-        addVertex({{0, 1, 0}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, 0, -1}});
-        addVertex({{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 0, -1}});
+        vertices[verticesIndex + 0] = {{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 0, -1}};
+        vertices[verticesIndex + 1] = {{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 0, -1}};
+        vertices[verticesIndex + 2] = {{1, 0, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, 0, -1}};
+        vertices[verticesIndex + 3] = {{0, 1, 0}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, 0, -1}};
+        indices[indicesIndex + 0] = verticesIndex + 0;
+        indices[indicesIndex + 1] = verticesIndex + 1;
+        indices[indicesIndex + 2] = verticesIndex + 2;
+        indices[indicesIndex + 3] = verticesIndex + 0;
+        indices[indicesIndex + 4] = verticesIndex + 3;
+        indices[indicesIndex + 5] = verticesIndex + 1;
     } else if (side == 3) {
-        addVertex({{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
-        addVertex({{1, 0, 1}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, 0, 1}});
-        addVertex({{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
-        addVertex({{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}});
-        addVertex({{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 0, 1}});
-        addVertex({{0, 1, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, 0, 1}});
+        vertices[verticesIndex + 0] = {{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 0, 1}};
+        vertices[verticesIndex + 1] = {{1, 0, 1}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, 0, 1}};
+        vertices[verticesIndex + 2] = {{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 0, 1}};
+        vertices[verticesIndex + 3] = {{0, 1, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, 0, 1}};
+        indices[indicesIndex + 0] = verticesIndex + 0;
+        indices[indicesIndex + 1] = verticesIndex + 1;
+        indices[indicesIndex + 2] = verticesIndex + 2;
+        indices[indicesIndex + 3] = verticesIndex + 0;
+        indices[indicesIndex + 4] = verticesIndex + 2;
+        indices[indicesIndex + 5] = verticesIndex + 3;
     } else if (side == -1) {
-        addVertex({{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
-        addVertex({{0, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
-        addVertex({{0, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {-1, 0, 0}});
-        addVertex({{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}});
-        addVertex({{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {-1, 0, 0}});
-        addVertex({{0, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {-1, 0, 0}});
+        vertices[verticesIndex + 0] = {{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {-1, 0, 0}};
+        vertices[verticesIndex + 1] = {{0, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {-1, 0, 0}};
+        vertices[verticesIndex + 2] = {{0, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {-1, 0, 0}};
+        vertices[verticesIndex + 3] = {{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {-1, 0, 0}};
+        indices[indicesIndex + 0] = verticesIndex + 0;
+        indices[indicesIndex + 1] = verticesIndex + 1;
+        indices[indicesIndex + 2] = verticesIndex + 2;
+        indices[indicesIndex + 3] = verticesIndex + 0;
+        indices[indicesIndex + 4] = verticesIndex + 3;
+        indices[indicesIndex + 5] = verticesIndex + 1;
     } else if (side == 1) {
-        addVertex({{1, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
-        addVertex({{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {1, 0, 0}});
-        addVertex({{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
-        addVertex({{1, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}});
-        addVertex({{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {1, 0, 0}});
-        addVertex({{1, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {1, 0, 0}});
+        vertices[verticesIndex + 0] = {{1, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {1, 0, 0}};
+        vertices[verticesIndex + 1] = {{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {1, 0, 0}};
+        vertices[verticesIndex + 2] = {{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {1, 0, 0}};
+        vertices[verticesIndex + 3] = {{1, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {1, 0, 0}};
+        indices[indicesIndex + 0] = verticesIndex + 0;
+        indices[indicesIndex + 1] = verticesIndex + 1;
+        indices[indicesIndex + 2] = verticesIndex + 2;
+        indices[indicesIndex + 3] = verticesIndex + 0;
+        indices[indicesIndex + 4] = verticesIndex + 2;
+        indices[indicesIndex + 5] = verticesIndex + 3;
     } else if (side == -2) {
-        addVertex({{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
-        addVertex({{1, 0, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, -1, 0}});
-        addVertex({{1, 0, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
-        addVertex({{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}});
-        addVertex({{1, 0, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, -1, 0}});
-        addVertex({{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, -1, 0}});
+        vertices[verticesIndex + 0] = {{0, 0, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, -1, 0}};
+        vertices[verticesIndex + 1] = {{1, 0, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, -1, 0}};
+        vertices[verticesIndex + 2] = {{1, 0, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, -1, 0}};
+        vertices[verticesIndex + 3] = {{0, 0, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, -1, 0}};
+        indices[indicesIndex + 0] = verticesIndex + 0;
+        indices[indicesIndex + 1] = verticesIndex + 1;
+        indices[indicesIndex + 2] = verticesIndex + 2;
+        indices[indicesIndex + 3] = verticesIndex + 0;
+        indices[indicesIndex + 4] = verticesIndex + 2;
+        indices[indicesIndex + 5] = verticesIndex + 3;
     } else if (side == 2) {
-        addVertex({{0, 1, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
-        addVertex({{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
-        addVertex({{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, 1, 0}});
-        addVertex({{0, 1, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}});
-        addVertex({{0, 1, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, 1, 0}});
-        addVertex({{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 1, 0}});
+        vertices[verticesIndex + 0] = {{0, 1, 0}, xyz, uv, {texCord.x + 0, texCord.y + 0}, {0, 1, 0}};
+        vertices[verticesIndex + 1] = {{1, 1, 1}, xyz, uv, {texCord.x + a, texCord.y + a}, {0, 1, 0}};
+        vertices[verticesIndex + 2] = {{1, 1, 0}, xyz, uv, {texCord.x + a, texCord.y + 0}, {0, 1, 0}};
+        vertices[verticesIndex + 3] = {{0, 1, 1}, xyz, uv, {texCord.x + 0, texCord.y + a}, {0, 1, 0}};
+        indices[indicesIndex + 0] = verticesIndex + 0;
+        indices[indicesIndex + 1] = verticesIndex + 1;
+        indices[indicesIndex + 2] = verticesIndex + 2;
+        indices[indicesIndex + 3] = verticesIndex + 0;
+        indices[indicesIndex + 4] = verticesIndex + 3;
+        indices[indicesIndex + 5] = verticesIndex + 1;
     }
 
-    if (usingEmptySlot) {
+    if (usingEmptyIndicesSlot) {
         indicesIndex = originalIndicesIndex;
+    } else {
+        indicesIndex += 6;
+    }
+    if (usingEmptyVerticesSlot) {
+        verticesIndex = originalVerticesIndex;
+    } else {
+        verticesIndex += 4;
     }
 }
 
 void World::removeSide(CellLoc loc, int side) {
     SideIndex sideIndex = {loc.x, loc.y, loc.z, loc.u, loc.v, side};
-    if (sideIndices.count(sideIndex)) {
+    if (sideIndices.count(sideIndex) && sideVertices.count(sideIndex)) {
         size_t index = sideIndices[sideIndex];
         for (size_t i = index; i < index + 6; i += 1) {
             indices[i] = 0;
@@ -471,47 +504,14 @@ void World::removeSide(CellLoc loc, int side) {
         sideIndices.erase(sideIndex);
         emptySideIndices.push_back(index);
         changedIndices.push_back(index);
-    }
-}
 
-void World::addVertex(const Vertex &vertex) {
-    if (uniqueVertices.count(vertex) == 0) {
-        uniqueVertices[vertex] = static_cast<uint32_t>(verticesIndex);
-        vertices[verticesIndex] = vertex;
-        changedVertices.push_back(verticesIndex);
-        verticesIndex += 1;
-    }
-    indices[indicesIndex] = uniqueVertices[vertex];
-    indicesIndex += 1;
-}
-
-void World::filterVertexArrayWithinChunk(ChunkLoc loc) {
-    std::unordered_map<int, int> oldToNewVertexIndex;
-    for (int i = 0; i < verticesIndex; i++) {
-        if (
-            vertices[i].pos.x >= loc.x * CHUNK_SIZE_XZUV
-            && vertices[i].pos.x < (loc.x + 1) * CHUNK_SIZE_XZUV
-            && vertices[i].pos.y >= loc.y * CHUNK_SIZE_Y
-            && vertices[i].pos.y < (loc.y + 1) * CHUNK_SIZE_Y
-            && vertices[i].pos.z >= loc.z * CHUNK_SIZE_XZUV
-            && vertices[i].pos.z < (loc.z + 1) * CHUNK_SIZE_XZUV
-            && vertices[i].UV.x >= loc.u * CHUNK_SIZE_XZUV
-            && vertices[i].UV.x < (loc.u + 1) * CHUNK_SIZE_XZUV
-            && vertices[i].UV.y >= loc.v * CHUNK_SIZE_XZUV
-            && vertices[i].UV.y < (loc.v + 1) * CHUNK_SIZE_XZUV
-        ) {
-            vertices[i] = vertices[verticesIndex - 1];
-            vertices[verticesIndex - 1] = {};
-            oldToNewVertexIndex[verticesIndex - 1] = i;
-            verticesIndex--;
-            i--;
+        index = sideVertices[sideIndex];
+        for (size_t i = index; i < index + 6; i += 1) {
+            vertices[i] = {};
         }
-    }
-
-    for (int i = 0; i < indicesIndex; i++) {
-        if (oldToNewVertexIndex.count(indices[i])) {
-            indices[i] = oldToNewVertexIndex[i];
-        }
+        sideVertices.erase(sideIndex);
+        emptySideVertices.push_back(index);
+        changedVertices.push_back(index);
     }
 }
 
@@ -522,7 +522,7 @@ void World::sendVerticesAndIndicesToVulkan() {
                 vulkan->resetIndexRange(indices, changedIndex, 6);
             }
             for (auto changedVertex : changedVertices) {
-                vulkan->resetVertexRange(vertices, changedVertex, 1);
+                vulkan->resetVertexRange(vertices, changedVertex, 4);
             }
         } else {
             vulkan->resetVerticesAndIndices(vertices, indices);

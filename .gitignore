@@ -6,6 +6,7 @@ VulkanTest
 *.spv
 *.dSYM
 *.swp
+./world*
 
 .env_vars
 
