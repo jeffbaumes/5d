@@ -2,6 +2,12 @@
 
 ## Development
 
+To clone:
+
+```
+git clone git@github.com:jeffbaumes/5d.git --recurse-submodules
+```
+
 Set up your development environment by following the instructions in the
 [Vulkan tutorial](https://vulkan-tutorial.com/Development_environment).
 You will also need the dependencies for
