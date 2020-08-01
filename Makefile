@@ -15,7 +15,9 @@ else
   endif
 endif
 
-CFLAGS = -std=c++17 -I$(VULKAN_SDK_PATH)/include -Ilib/vendor -g
+GAME_NETWORKING_SOCKETS_PATH = /Users/jeff/code/GameNetworkingSockets
+
+CFLAGS = -std=c++17 -I$(VULKAN_SDK_PATH)/include -I$(GAME_NETWORKING_SOCKETS_PATH)/include -Ilib/vendor -g
 # CFLAGS = -std=c++17 -I$(VULKAN_SDK_PATH)/include -Ilib/vendor -O3 -DNDEBUG
 LDFLAGS = -L$(VULKAN_SDK_PATH)/lib `pkg-config --static --libs glfw3` -lvulkan
 
