@@ -8,6 +8,12 @@ To clone:
 git clone git@github.com:jeffbaumes/5d.git --recurse-submodules
 ```
 
+If you already pulled but forgot to add `--recuse-submodules` pull the submodules with:
+
+```
+git submodule update --init
+```
+
 Set up your development environment by following the instructions in the
 [Vulkan tutorial](https://vulkan-tutorial.com/Development_environment).
 You will also need the dependencies for

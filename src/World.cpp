@@ -256,7 +256,7 @@ void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData
 };
 
 void World::loadChunk(ChunkLoc loc) {
-    std::string filename = std::to_string(loc.x) + "-" + std::to_string(loc.y) + "-" + std::to_string(loc.z) + "-" + std::to_string(loc.u) + "-" + std::to_string(loc.v);
+    std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
     std::ifstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
 
     Chunk chunk;
@@ -315,7 +315,7 @@ void World::saveChunk(ChunkLoc loc) {
         return;
     }
 
-    std::string filename = std::to_string(loc.x) + "-" + std::to_string(loc.y) + "-" + std::to_string(loc.z) + "-" + std::to_string(loc.u) + "-" + std::to_string(loc.v);
+    std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
     std::ofstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
 
     file.write((char *) chunks[loc].cells.data(), sizeof(chunks[loc].cells[0]) * chunks[loc].cells.size());
@@ -415,10 +415,10 @@ void World::createSide(CellLoc loc, int side) {
     uint16_t sp = ((mat << 3) + side + 3) << 3;
 
     if (side == -3) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 6), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 4), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 2), xyz, uv};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b000), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b010), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -426,10 +426,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 3;
         indices[indicesIndex + 5] = verticesIndex + 1;
     } else if (side == 3) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 1), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 5), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 7), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 3), xyz, uv};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -437,10 +437,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 2;
         indices[indicesIndex + 5] = verticesIndex + 3;
     } else if (side == -1) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 3), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 2), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 1), xyz, uv};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b000), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b010), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -448,10 +448,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 3;
         indices[indicesIndex + 5] = verticesIndex + 1;
     } else if (side == 1) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 4), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 6), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 7), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 5), xyz, uv};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -459,10 +459,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 2;
         indices[indicesIndex + 5] = verticesIndex + 3;
     } else if (side == -2) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 4), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 5), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 1), xyz, uv};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b000), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;
@@ -470,10 +470,10 @@ void World::createSide(CellLoc loc, int side) {
         indices[indicesIndex + 4] = verticesIndex + 2;
         indices[indicesIndex + 5] = verticesIndex + 3;
     } else if (side == 2) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 2), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 7), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 6), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 3), xyz, uv};
+        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b010), xyz, uv};
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
         indices[indicesIndex + 0] = verticesIndex + 0;
         indices[indicesIndex + 1] = verticesIndex + 1;
         indices[indicesIndex + 2] = verticesIndex + 2;

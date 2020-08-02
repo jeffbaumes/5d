@@ -153,8 +153,8 @@ class World {
     std::vector<size_t> emptySideVertices;
     std::string dirname;
 
-    int indicesIndex;
-    int verticesIndex;
+    int indicesIndex = 0;
+    int verticesIndex = 0;
 
     std::vector<size_t> changedIndices;
     std::vector<size_t> changedVertices;
