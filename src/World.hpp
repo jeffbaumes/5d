@@ -6,7 +6,7 @@
 #include <sqlite3.h>
 
 #include "VulkanUtil.hpp"
-
+#include "Entity.hpp"
 
 
 struct ChunkNotLoadedException : public std::exception
@@ -121,6 +121,15 @@ class World {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
+    int indicesIndex = 0;
+    int verticesIndex = 0;
+
+    std::vector<size_t> changedIndices;
+    std::vector<size_t> changedVertices;
+
+    std::vector<Entity> entities;
+    std::vector<int> unusedEntityIDS;
+
     World(VulkanUtil *vulkan);
     World(VulkanUtil *vulkan, std::string dirname);
     ~World();
@@ -143,6 +152,12 @@ class World {
 
     void printStats();
 
+    void updateUBO(UniformBufferObject *ubo);
+
+
+    void createSide(CellLoc loc, int side, Cell cellData = -1);
+    void removeSide(CellLoc loc, int side);
+
    private:
     VulkanUtil *vulkan;
     bool running = false;
@@ -153,19 +168,13 @@ class World {
     std::vector<size_t> emptySideVertices;
     std::string dirname;
 
-    int indicesIndex = 0;
-    int verticesIndex = 0;
 
-    std::vector<size_t> changedIndices;
-    std::vector<size_t> changedVertices;
 
     void destroy();
 
     void writeFile(int startLoc, void* data, int size);
     void* readFile(int startLoc, int size);
 
-    void createSide(CellLoc loc, int side);
-    void removeSide(CellLoc loc, int side);
 };
 
 #endif

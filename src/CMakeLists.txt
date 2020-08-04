@@ -10,6 +10,7 @@ add_executable(5d
   VulkanUtil.cpp
   network.cpp
   main.cpp
+  Entity.cpp
 )
 
 target_include_directories(5d

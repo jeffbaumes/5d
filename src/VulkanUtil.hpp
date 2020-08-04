@@ -86,6 +86,9 @@ struct hash<Vertex> {
     }
 };
 }
+
+const int MAX_ENTITYS = 10;
+
 struct UniformBufferObject {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
@@ -95,6 +98,8 @@ struct UniformBufferObject {
     alignas(8) glm::vec2 uv;
     alignas(8) glm::vec2 selectedCellUV;
     alignas(4) float uvView;
+    alignas(16) glm::vec4 entityRotation[MAX_ENTITYS];
+    alignas(16) glm::vec4 entityLocation[MAX_ENTITYS];    
 };
 
 class VulkanUtil {

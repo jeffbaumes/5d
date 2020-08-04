@@ -25,6 +25,7 @@
 
 #include "VulkanUtil.hpp"
 #include "World.hpp"
+#include "Entity.hpp"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -85,9 +86,9 @@ class App {
     World world = World(&vulkan);
     std::vector<int> cells;
     std::map<SideIndex, size_t> sideIndices;
-    std::unordered_map<Vertex, uint32_t> uniqueVertices;
-    long vertexIndex = 0;
-    long indexIndex = 0;
+    // std::unordered_map<Vertex, uint32_t> uniqueVertices;
+    // long vertexIndex = 0;
+    // long indexIndex = 0;
 
     int buildMat = 1;
 
@@ -118,17 +119,21 @@ class App {
 
     void initWorld() {
         world.init();
-        int size = 1;
-        for (int x = -size; x <= size; x += 1) {
-            for (int z = -size; z <= size; z += 1) {
-                for (int u = -size; u <= size; u += 1) {
-                    for (int v = -size; v <= size; v += 1) {
-                        std::cerr << x << "," << z << "," << u << "," << v << std::endl;
-                        world.loadChunk({x, 0, z, u, v});
-                    }
-                }
-            }
-        }
+        world.loadChunk({0, 0, 0, 0, 0});
+        auto entity = Entity(&world, 3);
+        entity.init();
+        world.entities.push_back(entity);
+        // int size = 1;
+        // for (int x = -size; x <= size; x += 1) {
+        //     for (int z = -size; z <= size; z += 1) {
+        //         for (int u = -size; u <= size; u += 1) {
+        //             for (int v = -size; v <= size; v += 1) {
+        //                 std::cerr << x << "," << z << "," << u << "," << v << std::endl;
+        //                 world.loadChunk({x, 0, z, u, v});
+        //             }
+        //         }
+        //     }
+        // }
         world.printStats();
         world.sendVerticesAndIndicesToVulkan();
     }
@@ -437,6 +442,9 @@ class App {
         float timeDelta = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
         lastTime = currentTime;
 
+        world.entities[0].location = glm::vec3(glm::sin(time), 9, 2);
+        // std::cout << world.entities[0].location.x << "," << world.entities[0].location.y << "," << world.entities[0].location.z << "," << std::endl;
+
         updatePosition(timeDelta);
 
         UniformBufferObject ubo{};
@@ -462,6 +470,14 @@ class App {
             uvView = (1.0f - alpha) * uvViewTarget + alpha * uvView;
         }
         ubo.uvView = uvView;
+
+        // std::cerr << "before" << std::endl << std::flush;
+
+        world.updateUBO(&ubo);
+
+        // std::cerr << "after" << std::endl << std::flush;
+
+        // std::cout << ubo.entityLocation[world.entities[0].id()].x << "," << ubo.entityLocation[world.entities[0].id()].y << "," << ubo.entityLocation[world.entities[0].id()].z << "," << std::endl;
 
         vulkan.ubo = ubo;
     }

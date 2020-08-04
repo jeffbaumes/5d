@@ -12,6 +12,8 @@ layout(binding = 0) uniform UniformBufferObject {
     vec2 uv;
     vec2 selectedCellUV;
     float uvView;
+    vec4 entityRotation[10];
+    vec4 entityLocation[10];
 } ubo;
 
 layout(location = 0) in uint inPos;
@@ -24,9 +26,21 @@ layout(location = 2) out vec2 fragPosition;
 
 
 void main() {
+    int MY_MAX_INT = 32765;
     ivec3 inPosition = ivec3((inPos / 4) % 2, (inPos / 2) % 2, inPos % 2);
     int face = int((inPos / 8) % 8) - 3;
     int material = int(inPos / 64);
+    vec3 calcXYZ = inXYZ;
+    vec2 calcUV = inUV;
+    // fragTexCoord = tex;
+    fragTexCoord = vec2(inXYZ.y / MY_MAX_INT, inXYZ.y / MY_MAX_INT);
+    if (inXYZ.x == 9) {
+        fragTexCoord = vec2(1.0, 1.0);
+        // calcXYZ = ubo.entityLocation[inXYZ.x].xyz;
+        // calcUV = floor(ubo.uv);
+        calcXYZ = vec3(0.0, 10.0, 0.0);
+        calcUV = floor(uv);
+    }
     float a2 = 0.0001;
     int TEX_WIDTH = 2;
     vec2 materialTexCoord = vec2(
@@ -51,13 +65,17 @@ void main() {
     vec3 eyeShow;
     vec2 eyeHide;
     if (ubo.uvView < 0.5f) {
-        inShow = inXYZ;
-        inHide = inUV;
+        inShow = calcXYZ;
+        // inShow = inXYZ;
+        inHide = calcUV;
+        // inHide = inUV;
         eyeShow = ubo.xyz;
         eyeHide = ubo.uv - 0.5f;
     } else {
-        inShow = vec3(inUV.x, inXYZ.y, inUV.y);
-        inHide = inXYZ.xz;
+        // inShow = vec3(inUV.x, inXYZ.y, inUV.y);
+        inShow = vec3(calcUV.x, calcXYZ.y, calcUV.y);
+        // inHide = inXYZ.xz;
+        inHide = calcXYZ.xz;
         eyeShow = vec3(ubo.uv.x, ubo.xyz.y, ubo.uv.y);
         eyeHide = ubo.xyz.xz - 0.5f;
     }
@@ -112,9 +130,10 @@ void main() {
         float a = (ubo.uvView - 0.5f) * 2.0;
         loc = mix(floor(eyeShow), inShow, a);
     }
-    loc.y = inXYZ.y;
+    loc.y = calcXYZ.y;
+    // loc.y = inXYZ.y;
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(pos + loc, 1.0);
     fragColor = vec3(area);
-    fragTexCoord = tex;
+    // fragTexCoord = tex;
     fragPosition = vec2(pos.x, pos.z);
 }

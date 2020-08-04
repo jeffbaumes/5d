@@ -5,6 +5,8 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "Entity.hpp"
+
 /**
  * Divide one integer by another, rounding towards minus infinity.
  * @param x the dividend
@@ -372,13 +374,17 @@ void World::init() {
     indices.resize(100 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 6, 0);
     std::cerr << sizeof(vertices[0]) << std::endl;
 
+    for (int x = 0; x < MAX_ENTITYS; x++) {
+        unusedEntityIDS.push_back(x);
+    }
+
     verticesIndex++;
 }
 
 void World::destroy() {
 }
 
-void World::createSide(CellLoc loc, int side) {
+void World::createSide(CellLoc loc, int side, Cell cellData) {
     SideIndex sideIndex = {loc.x, loc.y, loc.z, loc.u, loc.v, side};
 
     if (sideIndices.count(sideIndex)) {
@@ -408,6 +414,9 @@ void World::createSide(CellLoc loc, int side) {
     sideVertices[sideIndex] = verticesIndex;
 
     Cell mat = getCell(loc);
+    if (cellData != -1) {
+        mat = cellData;
+    };
 
     auto xyz = glm::i16vec3(loc.x, loc.y, loc.z);
     auto uv = glm::i16vec2(loc.u, loc.v);
@@ -533,4 +542,10 @@ void World::sendVerticesAndIndicesToVulkan() {
     running = true;
     changedVertices.clear();
     changedIndices.clear();
+}
+
+void World::updateUBO(UniformBufferObject *ubo) {
+    for (int i = 0; i < entities.size(); i++) {
+        entities[i].updateUBO(ubo);
+    }
 }
