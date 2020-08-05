@@ -1,2 +1,0 @@
-grass.png stone.png
-water.png empty.png

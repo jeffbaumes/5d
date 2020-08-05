@@ -32,14 +32,10 @@ void main() {
     int material = int(inPos / 64);
     vec3 calcXYZ = inXYZ;
     vec2 calcUV = inUV;
-    // fragTexCoord = tex;
-    fragTexCoord = vec2(inXYZ.y / MY_MAX_INT, inXYZ.y / MY_MAX_INT);
     if (inXYZ.x == 9) {
         fragTexCoord = vec2(1.0, 1.0);
-        // calcXYZ = ubo.entityLocation[inXYZ.x].xyz;
-        // calcUV = floor(ubo.uv);
-        calcXYZ = vec3(0.0, 10.0, 0.0);
-        calcUV = floor(uv);
+        calcXYZ = ubo.entityLocation[inXYZ.x].xyz;
+        calcUV = floor(ubo.uv);
     }
     float a2 = 0.0001;
     int TEX_WIDTH = 2;
@@ -66,15 +62,11 @@ void main() {
     vec2 eyeHide;
     if (ubo.uvView < 0.5f) {
         inShow = calcXYZ;
-        // inShow = inXYZ;
         inHide = calcUV;
-        // inHide = inUV;
         eyeShow = ubo.xyz;
         eyeHide = ubo.uv - 0.5f;
     } else {
-        // inShow = vec3(inUV.x, inXYZ.y, inUV.y);
         inShow = vec3(calcUV.x, calcXYZ.y, calcUV.y);
-        // inHide = inXYZ.xz;
         inHide = calcXYZ.xz;
         eyeShow = vec3(ubo.uv.x, ubo.xyz.y, ubo.uv.y);
         eyeHide = ubo.xyz.xz - 0.5f;
@@ -131,9 +123,8 @@ void main() {
         loc = mix(floor(eyeShow), inShow, a);
     }
     loc.y = calcXYZ.y;
-    // loc.y = inXYZ.y;
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(pos + loc, 1.0);
     fragColor = vec3(area);
-    // fragTexCoord = tex;
+    fragTexCoord = tex;
     fragPosition = vec2(pos.x, pos.z);
 }

@@ -21,7 +21,7 @@ void Entity::updateUBO(UniformBufferObject *ubo) {
 }
 
 Entity::Entity(World *worldIn, int material) : world(worldIn), _material(material) {
-    
+
 }
 
 void Entity::init() {
@@ -39,7 +39,7 @@ void Entity::init() {
 void Entity::init(World *worldIn, int material) {
     world = worldIn;
     _material = material;
-    
+
     init();
 }
 
@@ -68,10 +68,10 @@ void Entity::show() {
 
     uint16_t sp = (_material << 3);
 
-    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(sp + 0 << 3 + 0b000), xyz, uv};
-    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(sp + 0 << 3 + 0b110), xyz, uv};
-    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(sp + 0 << 3 + 0b100), xyz, uv};
-    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(sp + 0 << 3 + 0b010), xyz, uv};
+    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(((sp + 0) << 3) + 0b000), xyz, uv};
+    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(((sp + 0) << 3) + 0b110), xyz, uv};
+    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(((sp + 0) << 3) + 0b100), xyz, uv};
+    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(((sp + 0) << 3) + 0b010), xyz, uv};
     world->indices[world->indicesIndex + 0] = world->verticesIndex + 0;
     world->indices[world->indicesIndex + 1] = world->verticesIndex + 1;
     world->indices[world->indicesIndex + 2] = world->verticesIndex + 2;
@@ -85,12 +85,10 @@ void Entity::show() {
     world->indicesIndex += 6;
     world->verticesIndex += 4;
 
-
-
-    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(sp + 6 << 3 + 0b001), xyz, uv};
-    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(sp + 6 << 3 + 0b101), xyz, uv};
-    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(sp + 6 << 3 + 0b111), xyz, uv};
-    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(sp + 6 << 3 + 0b011), xyz, uv};
+    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(((sp + 6) << 3) + 0b001), xyz, uv};
+    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(((sp + 6) << 3) + 0b101), xyz, uv};
+    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(((sp + 6) << 3) + 0b111), xyz, uv};
+    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(((sp + 6) << 3) + 0b011), xyz, uv};
     world->indices[world->indicesIndex + 0] = world->verticesIndex + 0;
     world->indices[world->indicesIndex + 1] = world->verticesIndex + 1;
     world->indices[world->indicesIndex + 2] = world->verticesIndex + 2;
@@ -104,29 +102,44 @@ void Entity::show() {
     world->indicesIndex += 6;
     world->verticesIndex += 4;
 
-
-    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(sp + 2 << 3 + 0b000), xyz, uv};
-    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(sp + 2 << 3 + 0b011), xyz, uv};
-    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(sp + 2 << 3 + 0b010), xyz, uv};
-    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(sp + 2 << 3 + 0b001), xyz, uv};
+    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(((sp + 2) << 3) + 0b000), xyz, uv};
+    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(((sp + 2) << 3) + 0b011), xyz, uv};
+    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(((sp + 2) << 3) + 0b010), xyz, uv};
+    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(((sp + 2) << 3) + 0b001), xyz, uv};
     world->indices[world->indicesIndex + 0] = world->verticesIndex + 0;
     world->indices[world->indicesIndex + 1] = world->verticesIndex + 1;
     world->indices[world->indicesIndex + 2] = world->verticesIndex + 2;
     world->indices[world->indicesIndex + 3] = world->verticesIndex + 0;
     world->indices[world->indicesIndex + 4] = world->verticesIndex + 3;
     world->indices[world->indicesIndex + 5] = world->verticesIndex + 1;
-    
+
     world->changedIndices.push_back(world->indicesIndex);
     world->changedVertices.push_back(world->verticesIndex);
 
     world->indicesIndex += 6;
     world->verticesIndex += 4;
 
+    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(((sp + 4) << 3) + 0b100), xyz, uv};
+    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(((sp + 4) << 3) + 0b110), xyz, uv};
+    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(((sp + 4) << 3) + 0b111), xyz, uv};
+    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(((sp + 4) << 3) + 0b101), xyz, uv};
+    world->indices[world->indicesIndex + 0] = world->verticesIndex + 0;
+    world->indices[world->indicesIndex + 1] = world->verticesIndex + 1;
+    world->indices[world->indicesIndex + 2] = world->verticesIndex + 2;
+    world->indices[world->indicesIndex + 3] = world->verticesIndex + 0;
+    world->indices[world->indicesIndex + 4] = world->verticesIndex + 2;
+    world->indices[world->indicesIndex + 5] = world->verticesIndex + 3;
 
-    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(sp + 4 << 3 + 0b100), xyz, uv};
-    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(sp + 4 << 3 + 0b110), xyz, uv};
-    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(sp + 4 << 3 + 0b111), xyz, uv};
-    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(sp + 4 << 3 + 0b101), xyz, uv};
+    world->changedIndices.push_back(world->indicesIndex);
+    world->changedVertices.push_back(world->verticesIndex);
+
+    world->indicesIndex += 6;
+    world->verticesIndex += 4;
+
+    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(((sp + 1) << 3) + 0b000), xyz, uv};
+    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(((sp + 1) << 3) + 0b100), xyz, uv};
+    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(((sp + 1) << 3) + 0b101), xyz, uv};
+    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(((sp + 1) << 3) + 0b001), xyz, uv};
     world->indices[world->indicesIndex + 0] = world->verticesIndex + 0;
     world->indices[world->indicesIndex + 1] = world->verticesIndex + 1;
     world->indices[world->indicesIndex + 2] = world->verticesIndex + 2;
@@ -141,28 +154,10 @@ void Entity::show() {
     world->verticesIndex += 4;
 
 
-    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(sp + 1 << 3 + 0b000), xyz, uv};
-    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(sp + 1 << 3 + 0b100), xyz, uv};
-    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(sp + 1 << 3 + 0b101), xyz, uv};
-    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(sp + 1 << 3 + 0b001), xyz, uv};
-    world->indices[world->indicesIndex + 0] = world->verticesIndex + 0;
-    world->indices[world->indicesIndex + 1] = world->verticesIndex + 1;
-    world->indices[world->indicesIndex + 2] = world->verticesIndex + 2;
-    world->indices[world->indicesIndex + 3] = world->verticesIndex + 0;
-    world->indices[world->indicesIndex + 4] = world->verticesIndex + 2;
-    world->indices[world->indicesIndex + 5] = world->verticesIndex + 3;
-
-    world->changedIndices.push_back(world->indicesIndex);
-    world->changedVertices.push_back(world->verticesIndex);
-
-    world->indicesIndex += 6;
-    world->verticesIndex += 4;
-
-
-    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(sp + 5 << 3 + 0b010), xyz, uv};
-    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(sp + 5 << 3 + 0b111), xyz, uv};
-    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(sp + 5 << 3 + 0b110), xyz, uv};
-    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(sp + 5 << 3 + 0b011), xyz, uv};
+    world->vertices[world->verticesIndex + 0] = {static_cast<uint16_t>(((sp + 5) << 3) + 0b010), xyz, uv};
+    world->vertices[world->verticesIndex + 1] = {static_cast<uint16_t>(((sp + 5) << 3) + 0b111), xyz, uv};
+    world->vertices[world->verticesIndex + 2] = {static_cast<uint16_t>(((sp + 5) << 3) + 0b110), xyz, uv};
+    world->vertices[world->verticesIndex + 3] = {static_cast<uint16_t>(((sp + 5) << 3) + 0b011), xyz, uv};
     world->indices[world->indicesIndex + 0] = world->verticesIndex + 0;
     world->indices[world->indicesIndex + 1] = world->verticesIndex + 1;
     world->indices[world->indicesIndex + 2] = world->verticesIndex + 2;

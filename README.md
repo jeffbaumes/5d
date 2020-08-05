@@ -20,12 +20,11 @@ You will also need the dependencies for
 [GameNetworkingSockets](https://github.com/ValveSoftware/GameNetworkingSockets/blob/master/BUILDING.md).
 
 To build:
-
 ```
 mkdir build
 cd build
-ccmake ..    # Set VULKAN_SDK_PATH appropriately then press 'g' to generate
-make         # Or run whatever other build system you set up
+ccmake ..    # Press 'c', set VULKAN_SDK_PATH appropriately, then press 'g' to generate
+make -j4     # Or run whatever other build system you set up
 ```
 
 To run, first set your Vulkan path:
@@ -40,29 +39,26 @@ export VK_LAYER_PATH=$VULKAN_SDK_PATH/share/vulkan/explicit_layer.d
 export VK_ICD_FILENAMES=$VULKAN_SDK_PATH/share/vulkan/icd.d/MoltenVK_icd.json
 ```
 
-For Linux do this:
+For Linux set these instead:
 ```
 export LD_LIBRARY_PATH=$VULKAN_SDK_PATH/lib
 export VK_LAYER_PATH=$VULKAN_SDK_PATH/etc/vulkan/explicit_layer.d
 ```
 
-Finally:
+Finally, from the `build/` directory:
 ```
-./build/src/5d
+src/5d
 ```
 
 To conform to the coding style, set your vscode setting:
-
 ```
 C_Cpp: Clang_format_fallback Style
 ```
 
 to
-
 ```
 { BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 0 }
 ```
 
 Until someone finishes [clang-format dangling parentheses](https://reviews.llvm.org/D33029)
 we will stick with long lines.
-

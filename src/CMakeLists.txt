@@ -1,6 +1,9 @@
 
 set(VULKAN_SDK_PATH "" CACHE PATH "Vulkan SDK path (include up to vulkan/[architecture])")
 
+add_subdirectory(shaders)
+add_subdirectory(assets/textures)
+
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLFW REQUIRED glfw3)
 pkg_search_module(GLM REQUIRED glm)
@@ -12,6 +15,8 @@ add_executable(5d
   main.cpp
   Entity.cpp
 )
+
+add_dependencies(5d spv texture)
 
 target_include_directories(5d
   PUBLIC
