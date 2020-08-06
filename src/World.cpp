@@ -332,7 +332,8 @@ void World::generateChunk(ChunkLoc loc) {
                 for (int u = 0; u < CHUNK_SIZE_XZUV; u += 1) {
                     for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
                         // setCellInChunk(loc, {x, y, z, u, v}, rand() % 3, false);
-                        if (y < CHUNK_SIZE_Y / 2) {
+                        // if (y < CHUNK_SIZE_Y / 2) {
+                        if (y < 1) {
                             int material = rand() % 2 + 1;
                             setCellInChunk(loc, {x, y, z, u, v}, material, false);
                         }

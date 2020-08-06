@@ -12,8 +12,9 @@ layout(binding = 0) uniform UniformBufferObject {
     vec2 uv;
     vec2 selectedCellUV;
     float uvView;
+    vec4 entityLocationUV[10];
     vec4 entityRotation[10];
-    vec4 entityLocation[10];
+    vec4 entityLocationXYZ[10];
 } ubo;
 
 layout(location = 0) in uint inPos;
@@ -25,6 +26,27 @@ layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec2 fragPosition;
 
 
+mat4 rotationX( in float angle ) {
+	return mat4(	1.0,		0,			0,			0,
+			 		0, 	cos(angle),	-sin(angle),		0,
+					0, 	sin(angle),	 cos(angle),		0,
+					0, 			0,			  0, 		1);
+}
+
+mat4 rotationY( in float angle ) {
+	return mat4(	cos(angle),		0,		sin(angle),	0,
+			 				0,		1.0,			 0,	0,
+					-sin(angle),	0,		cos(angle),	0,
+							0, 		0,				0,	1);
+}
+
+mat4 rotationZ( in float angle ) {
+	return mat4(	cos(angle),		-sin(angle),	0,	0,
+			 		sin(angle),		cos(angle),		0,	0,
+							0,				0,		1,	0,
+							0,				0,		0,	1);
+}
+
 void main() {
     int MY_MAX_INT = 32765;
     ivec3 inPosition = ivec3((inPos / 4) % 2, (inPos / 2) % 2, inPos % 2);
@@ -32,10 +54,22 @@ void main() {
     int material = int(inPos / 64);
     vec3 calcXYZ = inXYZ;
     vec2 calcUV = inUV;
-    if (inXYZ.x == 9) {
-        fragTexCoord = vec2(1.0, 1.0);
-        calcXYZ = ubo.entityLocation[inXYZ.x].xyz;
-        calcUV = floor(ubo.uv);
+    // fragTexCoord = vec2(0,0);
+    if (inXYZ.y == MY_MAX_INT) {
+        // fragTexCoord = vec2(ubo.entityLocationUV[inXYZ.x].y, ubo.entityLocationUV[inXYZ.x].y);
+        calcXYZ = floor(ubo.entityLocationXYZ[inXYZ.x].xyz);
+        calcUV = floor(ubo.entityLocationUV[inXYZ.x].xy);
+        // calcUV = floor(ubo.uv);
+
+        vec3 rotation = ubo.entityRotation[inXYZ.x].xyz;
+        vec4 calcXYZ4 = vec4(calcXYZ, 1.0);
+        // loc4 = loc4 - vec4(calcXYZ.x + 0.5, calcXYZ.y + 0.5, calcXYZ.z + 0.5, 0.0);
+        float ad = 0.5;
+        vec4 adr = vec4(calcXYZ.x + ad, calcXYZ.y - ad, calcXYZ.z + ad, 0.0);
+        calcXYZ4 = calcXYZ4 - adr;
+        calcXYZ4 = calcXYZ4 * rotationX(rotation.x) * rotationY(rotation.y) * rotationZ(rotation.z);
+        calcXYZ4 = calcXYZ4 + adr;
+        calcXYZ = calcXYZ4.xyz;
     }
     float a2 = 0.0001;
     int TEX_WIDTH = 2;
@@ -123,6 +157,17 @@ void main() {
         loc = mix(floor(eyeShow), inShow, a);
     }
     loc.y = calcXYZ.y;
+    // vec4 loc4 = vec4(loc, 1.0);
+    // // vec4 loc4 = vec4(loc - vec3(calcXYZ.x, calcXYZ.y, calcXYZ.z), 1.0);
+    // if (inXYZ.y == MY_MAX_INT) {
+    //     vec3 rotation = ubo.entityRotation[inXYZ.x].xyz;
+    //     // loc4 = loc4 - vec4(calcXYZ.x + 0.5, calcXYZ.y + 0.5, calcXYZ.z + 0.5, 0.0);
+    //     loc4 = loc4 - vec4(calcXYZ.x + 0.01, calcXYZ.y + 0.01, calcXYZ.z + 0.01, 0.0);
+    //     loc4 = loc4 * rotationX(rotation.x) * rotationY(rotation.y) * rotationZ(rotation.z);
+    //     loc4 = loc4 + vec4(calcXYZ.x + 0.01, calcXYZ.y + 0.01, calcXYZ.z + 0.01, 0.0);
+    // }
+    // // loc4 = loc4 + vec4(calcXYZ.x, calcXYZ.y, calcXYZ.z, 0.0);
+    // gl_Position = ubo.proj * ubo.view * ubo.model * vec4(pos + loc4.xyz, 1.0);
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(pos + loc, 1.0);
     fragColor = vec3(area);
     fragTexCoord = tex;

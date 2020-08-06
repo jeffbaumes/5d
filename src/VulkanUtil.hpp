@@ -98,8 +98,9 @@ struct UniformBufferObject {
     alignas(8) glm::vec2 uv;
     alignas(8) glm::vec2 selectedCellUV;
     alignas(4) float uvView;
+    alignas(16) glm::vec4 entityLocationUV[MAX_ENTITYS];
     alignas(16) glm::vec4 entityRotation[MAX_ENTITYS];
-    alignas(16) glm::vec4 entityLocation[MAX_ENTITYS];    
+    alignas(16) glm::vec4 entityLocationXYZ[MAX_ENTITYS];
 };
 
 class VulkanUtil {

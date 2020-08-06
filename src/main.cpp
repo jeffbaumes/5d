@@ -442,11 +442,14 @@ class App {
         float timeDelta = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
         lastTime = currentTime;
 
-        world.entities[0].location = glm::vec3(glm::sin(time), 9, 2);
-        // std::cout << world.entities[0].location.x << "," << world.entities[0].location.y << "," << world.entities[0].location.z << "," << std::endl;
+        // world.entities[0].location = {glm::sin(time) * 2 + 2, 2, glm::sin(time) * 2 + 2, 0, 0};
+        world.entities[0].location = {2, 2, 2, floor(uv.x), floor(uv.y)};
+        world.entities[0].rotation = glm::vec3(glm::sin(time), glm::sin(time), 0);
+        // std::cout << world.entities[0].location.u << "," << world.entities[0].location.v << "," << world.entities[0].location.x << "," << std::endl;
+        std::cout << loc.x << "," << loc.y << "," << loc.z << "," << uv.x << "," << uv.y << std::endl;
 
         updatePosition(timeDelta);
-
+ 
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f) / 4.0f, glm::vec3(0.0f, 0.0f, 1.0f));
         glm::vec3 look = lookDir();
@@ -477,7 +480,7 @@ class App {
 
         // std::cerr << "after" << std::endl << std::flush;
 
-        // std::cout << ubo.entityLocation[world.entities[0].id()].x << "," << ubo.entityLocation[world.entities[0].id()].y << "," << ubo.entityLocation[world.entities[0].id()].z << "," << std::endl;
+        // std::cout << ubo.entityLocationUV[world.entities[0].id()].x << "," << ubo.entityLocationUV[world.entities[0].id()].y << "," << ubo.entityLocationXYZ[world.entities[0].id()].z << "," << std::endl;
 
         vulkan.ubo = ubo;
     }

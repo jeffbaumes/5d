@@ -2,13 +2,14 @@
 #define D5_ENTITY_H_
 
 #include "VulkanUtil.hpp"
+#include "vec5.hpp"
 #include <deque>
 
 class World;
 
 class Entity {
    public:
-    glm::vec3 location;
+    vec5 location;
     glm::vec3 rotation;
 
     void updateUBO(UniformBufferObject *ubo);

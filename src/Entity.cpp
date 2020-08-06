@@ -16,7 +16,9 @@ const int& Entity::id() const {
 }
 
 void Entity::updateUBO(UniformBufferObject *ubo) {
-    ubo->entityLocation[_id] = glm::vec4(location, 0.0);
+    ubo->entityLocationXYZ[_id] = glm::vec4(location.xyz(), 0);
+    ubo->entityLocationUV[_id] = glm::vec4(location.uv(), 0, 0);
+    
     ubo->entityRotation[_id] = glm::vec4(rotation, 0.0);
 }
 
