@@ -443,13 +443,14 @@ class App {
         lastTime = currentTime;
 
         // world.entities[0].location = {glm::sin(time) * 2 + 2, 2, glm::sin(time) * 2 + 2, 0, 0};
-        world.entities[0].location = {2, 2, 2, floor(uv.x), floor(uv.y)};
+        // world.entities[0].location = {glm::sin(time), 2, 2, floor(uv.x), floor(uv.y)};
+        world.entities[0].location = {2, 2, 2, 2.5f + glm::sin(time), 2.5f};
         world.entities[0].rotation = glm::vec3(glm::sin(time), glm::sin(time), 0);
         // std::cout << world.entities[0].location.u << "," << world.entities[0].location.v << "," << world.entities[0].location.x << "," << std::endl;
-        std::cout << loc.x << "," << loc.y << "," << loc.z << "," << uv.x << "," << uv.y << std::endl;
+        // std::cout << loc.x << "," << loc.y << "," << loc.z << "," << uv.x << "," << uv.y << std::endl;
 
         updatePosition(timeDelta);
- 
+
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f) / 4.0f, glm::vec3(0.0f, 0.0f, 1.0f));
         glm::vec3 look = lookDir();

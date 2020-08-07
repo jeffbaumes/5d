@@ -1,6 +1,7 @@
 #ifndef D5_VEC5_H
 #define D5_VEC5_H
 #include <glm/glm.hpp>
+#include <iostream>
 
 struct vec5 {
     float x;

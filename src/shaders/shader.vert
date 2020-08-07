@@ -55,21 +55,25 @@ void main() {
     vec3 calcXYZ = inXYZ;
     vec2 calcUV = inUV;
     // fragTexCoord = vec2(0,0);
+    vec3 rotation = vec3(0);
     if (inXYZ.y == MY_MAX_INT) {
         // fragTexCoord = vec2(ubo.entityLocationUV[inXYZ.x].y, ubo.entityLocationUV[inXYZ.x].y);
-        calcXYZ = floor(ubo.entityLocationXYZ[inXYZ.x].xyz);
-        calcUV = floor(ubo.entityLocationUV[inXYZ.x].xy);
+        // calcXYZ = floor(ubo.entityLocationXYZ[inXYZ.x].xyz);
+        calcXYZ = ubo.entityLocationXYZ[inXYZ.x].xyz;
+        calcUV = ubo.entityLocationUV[inXYZ.x].xy;
+        // calcUV = floor(ubo.entityLocationUV[inXYZ.x].xy);
         // calcUV = floor(ubo.uv);
 
-        vec3 rotation = ubo.entityRotation[inXYZ.x].xyz;
-        vec4 calcXYZ4 = vec4(calcXYZ, 1.0);
-        // loc4 = loc4 - vec4(calcXYZ.x + 0.5, calcXYZ.y + 0.5, calcXYZ.z + 0.5, 0.0);
-        float ad = 0.5;
-        vec4 adr = vec4(calcXYZ.x + ad, calcXYZ.y - ad, calcXYZ.z + ad, 0.0);
-        calcXYZ4 = calcXYZ4 - adr;
-        calcXYZ4 = calcXYZ4 * rotationX(rotation.x) * rotationY(rotation.y) * rotationZ(rotation.z);
-        calcXYZ4 = calcXYZ4 + adr;
-        calcXYZ = calcXYZ4.xyz;
+        rotation = ubo.entityRotation[inXYZ.x].xyz;
+        // vec4 calcXYZ4 = vec4(calcXYZ, 1.0);
+        // // loc4 = loc4 - vec4(calcXYZ.x + 0.5, calcXYZ.y + 0.5, calcXYZ.z + 0.5, 0.0);
+        // float ad = 0.5;
+        // // vec4 adr = vec4(calcXYZ.x + ad, calcXYZ.y - ad, calcXYZ.z + ad, 0.0);
+        // vec4 adr = vec4(0.5, 0.5, 0.5, 0.0);
+        // calcXYZ4 = calcXYZ4 - adr;
+        // calcXYZ4 = calcXYZ4 * rotationX(rotation.x); // * rotationY(rotation.y) * rotationZ(rotation.z);
+        // calcXYZ4 = calcXYZ4 + adr;
+        // calcXYZ = calcXYZ4.xyz;
     }
     float a2 = 0.0001;
     int TEX_WIDTH = 2;
@@ -148,6 +152,15 @@ void main() {
         }
         area = frac.x * frac.z;
     }
+
+    if (inXYZ.y == MY_MAX_INT) {
+        inHide = round(inHide - 0.5) + 0.5;
+        if (abs((inHide.x - 0.5) - eyeHide.x) < 0.5 && abs((inHide.y - 0.5) - eyeHide.y) < 0.5) {
+            pos = inPosition;
+            area = 1.0;
+        }
+    }
+
     vec3 loc;
     if (ubo.uvView < 0.5f) {
         float a = ubo.uvView * 2.0;
@@ -168,8 +181,15 @@ void main() {
     // }
     // // loc4 = loc4 + vec4(calcXYZ.x, calcXYZ.y, calcXYZ.z, 0.0);
     // gl_Position = ubo.proj * ubo.view * ubo.model * vec4(pos + loc4.xyz, 1.0);
+
+    pos = (vec4(pos - vec3(0.5), 1.0) * rotationX(rotation.x) * rotationY(rotation.y) * rotationZ(rotation.z)).xyz + vec3(0.5);
+
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(pos + loc, 1.0);
     fragColor = vec3(area);
     fragTexCoord = tex;
-    fragPosition = vec2(pos.x, pos.z);
+    if (inXYZ.y == MY_MAX_INT) {
+        fragPosition = vec2(0);
+    } else {
+        fragPosition = vec2(pos.x, pos.z);
+    }
 }
