@@ -201,7 +201,6 @@ class App {
                 }
             } else if (key == GLFW_KEY_LEFT_SHIFT) {
                 app->uvTravel = true;
-                app->oldUv = app->uv;
             } else if (key == GLFW_KEY_ESCAPE) {
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                 app->cursorLocked = false;
@@ -273,13 +272,16 @@ class App {
     float fallVel = 0.0f;
     float walkVel = 2.0f;
     bool flying = false;
-    glm::vec3 loc = glm::vec3(CHUNK_SIZE_XZUV / 2 + 0.5f, CHUNK_SIZE_Y / 2 + 3, CHUNK_SIZE_XZUV / 2 + 0.5f);
-    glm::vec2 uv = glm::vec2(CHUNK_SIZE_XZUV / 2 + 0.5f, CHUNK_SIZE_XZUV / 2 + 0.5f);
+    vec5 location = {
+        CHUNK_SIZE_XZUV / 2 + 0.5f,
+        CHUNK_SIZE_Y / 2 + 3,
+        CHUNK_SIZE_XZUV / 2 + 0.5f,
+        CHUNK_SIZE_XZUV / 2 + 0.5f,
+        CHUNK_SIZE_XZUV / 2 + 0.5f};
     glm::vec3 lookHeading = glm::vec3(1.0f, 0.0f, 0.0f);
     float lookAltitude = 0.0f;
     float height = 1.75f;
     float radius = 0.25f;
-    glm::vec2 oldUv = glm::vec2(CHUNK_SIZE_XZUV / 2, CHUNK_SIZE_XZUV / 2);
     bool holdingJump = false;
     bool inJump = false;
     CellLoc focusedCell;
@@ -303,7 +305,7 @@ class App {
     }
 
     void collide(float h, int x, int y, int z, int u, int v) {
-        vec5 pos = {loc.x, loc.y - (height - h), loc.z, uv.x, uv.y};
+        vec5 pos = {location.x, location.y - (height - h), location.z, location.u, location.v};
         vec5 d = {static_cast<float>(x), static_cast<float>(y), static_cast<float>(z), static_cast<float>(u), static_cast<float>(v)};
         vec5 cell = floor(pos) + 0.5f;
         vec5 adjCell = cell + d;
@@ -319,9 +321,7 @@ class App {
                 float dist2Plane = dot(cNorm, pos - nLoc);
                 if (dist2Plane < radius) {
                     float move = radius - dist2Plane;
-                    cNorm = cNorm * move;
-                    loc = loc + cNorm.xyz();
-                    uv = uv + cNorm.uv();
+                    location = location + cNorm * move;
                 }
             }
         }
@@ -330,10 +330,10 @@ class App {
     void updatePosition(float time) {
         glm::vec3 up(0.0f, 1.0f, 0.0f);
         glm::vec3 right = glm::cross(lookHeading, up);
-        glm::vec3 feet = loc - (up * height);
-        int feetCell = world.getCell({feet, uv});
+        vec5 feet = location;
+        feet.y -= height;
+        int feetCell = world.getCell(feet);
         bool falling = feetCell == 0 && !flying;
-        // bool falling = feet.y > size / 2;
         if (falling) {
             fallVel -= 20.0f * time;
         } else if (holdingJump && !inJump) {
@@ -353,32 +353,38 @@ class App {
 
         // Move
         if (uvTravel == (uvView < 0.5f)) {
-            uv = uv + (glm::vec2(playerVel.x, playerVel.z) * time);
-            loc.y = loc.y + (playerVel.y * time);
+            location.u += playerVel.x * time;
+            location.v += playerVel.z * time;
+            location.y += playerVel.y * time;
         } else {
-            loc = loc + (playerVel * time);
+            location.x += playerVel.x * time;
+            location.z += playerVel.z * time;
+            location.y += playerVel.y * time;
         }
 
         // Snap hidden dimensions
         if (!uvTravel) {
             if (uvView < 0.5f) {
-                glm::vec2 rounded = glm::round(uv - 0.5f) + 0.5f;
-                if (glm::length(uv - rounded) < 0.01f) {
-                    uv = rounded;
-                } else {
-                    float alpha = glm::exp(-time * 7.0f / ANIMATION_TIME);
-                    uv = (1.0f - alpha) * rounded + alpha * uv;
-                }
-            } else {
-                glm::vec2 hide = glm::vec2(loc.x, loc.z);
+                glm::vec2 hide = location.uv();
                 glm::vec2 rounded = glm::round(hide - 0.5f) + 0.5f;
                 if (glm::length(hide - rounded) < 0.01f) {
-                    loc.x = rounded.x;
-                    loc.z = rounded.y;
+                    location.u = rounded.x;
+                    location.v = rounded.y;
                 } else {
                     float alpha = glm::exp(-time * 7.0f / ANIMATION_TIME);
-                    loc.x = (1.0f - alpha) * rounded.x + alpha * hide.x;
-                    loc.z = (1.0f - alpha) * rounded.y + alpha * hide.y;
+                    location.u = (1.0f - alpha) * rounded.x + alpha * location.u;
+                    location.v = (1.0f - alpha) * rounded.y + alpha * location.v;
+                }
+            } else {
+                glm::vec2 hide = glm::vec2(location.x, location.z);
+                glm::vec2 rounded = glm::round(hide - 0.5f) + 0.5f;
+                if (glm::length(hide - rounded) < 0.01f) {
+                    location.x = rounded.x;
+                    location.z = rounded.y;
+                } else {
+                    float alpha = glm::exp(-time * 7.0f / ANIMATION_TIME);
+                    location.x = (1.0f - alpha) * rounded.x + alpha * hide.x;
+                    location.z = (1.0f - alpha) * rounded.y + alpha * hide.y;
                 }
             }
         }
@@ -411,7 +417,7 @@ class App {
             increment.v = look.z;
         }
         increment = increment * 0.05f;
-        vec5 pos = {loc.x, loc.y, loc.z, uv.x, uv.y};
+        vec5 pos = location;
         focusedCell = {};
         CellLoc prevCell;
         for (int i = 0; i < 100; i++) {
@@ -444,7 +450,7 @@ class App {
 
         // world.entities[0].location = {glm::sin(time) * 2 + 2, 2, glm::sin(time) * 2 + 2, 0, 0};
         // world.entities[0].location = {glm::sin(time), 2, 2, floor(uv.x), floor(uv.y)};
-        world.entities[0].location = {2, 2, 2, 2.5f + glm::sin(time), 2.5f};
+        world.entities[0].location = {2 + glm::sin(time), 2, 2, 2, 2};
         world.entities[0].rotation = glm::vec3(glm::sin(time), glm::sin(time), 0);
         // std::cout << world.entities[0].location.u << "," << world.entities[0].location.v << "," << world.entities[0].location.x << "," << std::endl;
         // std::cout << loc.x << "," << loc.y << "," << loc.z << "," << uv.x << "," << uv.y << std::endl;
@@ -454,15 +460,15 @@ class App {
         UniformBufferObject ubo{};
         ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f) / 4.0f, glm::vec3(0.0f, 0.0f, 1.0f));
         glm::vec3 look = lookDir();
-        glm::vec3 eye = loc;
+        glm::vec3 eye = location.xyz();
         if (uvView > 0.5f) {
-            eye = glm::vec3(uv.x, loc.y, uv.y);
+            eye = glm::vec3(location.u, location.y, location.v);
         }
         ubo.view = glm::lookAt(eye, eye + look, glm::vec3(0.0f, 1.0f, 0.0f));
         ubo.proj = glm::perspective(glm::radians(45.0f), vulkan.swapChainExtent.width / (float)vulkan.swapChainExtent.height, 0.02f, 50.0f);
         ubo.proj[1][1] *= -1;
-        ubo.xyz = loc;
-        ubo.uv = uv;
+        ubo.xyz = location.xyz();
+        ubo.uv = location.uv();
 
         // ubo.selectedCell = focusedCell;
         // ubo.selectedCellUV = focusedCellUV;
