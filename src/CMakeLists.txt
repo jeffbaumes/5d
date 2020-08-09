@@ -11,7 +11,6 @@ pkg_search_module(GLM REQUIRED glm)
 add_executable(5d
   World.cpp
   VulkanUtil.cpp
-  network.cpp
   main.cpp
   Entity.cpp
 )

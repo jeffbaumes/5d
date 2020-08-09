@@ -22,39 +22,14 @@ struct ChunkNotLoadedException : public std::exception
 const int CHUNK_SIZE_XZUV = 4;
 const int CHUNK_SIZE_Y = 16;
 const int CHUNK_SIZE = CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y;
-const int TEX_WIDTH = 2;
+const int TEX_WIDTH = 3;
 const int MAX_INDIVIDUAL_CHANGES = 50;
 
-struct CellLoc {
-    CellLoc();
-    CellLoc(vec5 loc);
-    CellLoc(glm::vec3 xyz, glm::vec2 uv);
-    CellLoc(int x, int y, int z, int u, int v);
-    int x = 0;
-    int y = 0;
-    int z = 0;
-    int u = 0;
-    int v = 0;
-    void print() {
-        std::cerr << x << "," << y << "," << z << "," << u << "," << v << " " << std::endl;
-    }
-};
-
-struct ChunkLoc {
-    int x;
-    int y;
-    int z;
-    int u;
-    int v;
-
-    bool operator==(const ChunkLoc& other) const;
-};
-
+typedef ivec5 CellLoc;
+typedef ivec5 ChunkLoc;
+typedef ivec5 RelativeCellLoc;
 typedef std::array<int, 6> SideIndex;
-
 typedef int Cell;
-
-typedef CellLoc RelativeCellLoc;
 
 struct Chunk {
     Chunk();

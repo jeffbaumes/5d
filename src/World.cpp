@@ -35,38 +35,6 @@ int mod_floor(int x, int y) {
     return r;
 }
 
-CellLoc::CellLoc() {
-    x = 0;
-    y = 0;
-    z = 0;
-    u = 0;
-    v = 0;
-}
-
-CellLoc::CellLoc(vec5 loc) {
-    x = static_cast<int>(glm::floor(loc.x));
-    y = static_cast<int>(glm::floor(loc.y));
-    z = static_cast<int>(glm::floor(loc.z));
-    u = static_cast<int>(glm::floor(loc.u));
-    v = static_cast<int>(glm::floor(loc.v));
-}
-
-CellLoc::CellLoc(glm::vec3 xyz, glm::vec2 uv) {
-    x = static_cast<int>(glm::floor(xyz.x));
-    y = static_cast<int>(glm::floor(xyz.y));
-    z = static_cast<int>(glm::floor(xyz.z));
-    u = static_cast<int>(glm::floor(uv.x));
-    v = static_cast<int>(glm::floor(uv.y));
-}
-
-CellLoc::CellLoc(int _x, int _y, int _z, int _u, int _v) {
-    x = _x;
-    y = _y;
-    z = _z;
-    u = _u;
-    v = _v;
-}
-
 Chunk::Chunk() {
     cells.resize(CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV, 0);
 }
@@ -74,10 +42,6 @@ Chunk::Chunk() {
 Cell &Chunk::operator[](const RelativeCellLoc loc) {
     int size = CHUNK_SIZE_XZUV;
     return cells.at(loc.x + size * loc.y + size * CHUNK_SIZE_Y * loc.z + size * CHUNK_SIZE_Y * size * loc.u + size * CHUNK_SIZE_Y * size * size * loc.v);
-}
-
-bool ChunkLoc::operator==(const ChunkLoc& other) const {
-    return x == other.x && y == other.y && z == other.z && u == other.u && v == other.v;
 }
 
 ChunkLoc World::chunkLocForCell(CellLoc loc) {
@@ -333,8 +297,17 @@ void World::generateChunk(ChunkLoc loc) {
                     for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
                         // setCellInChunk(loc, {x, y, z, u, v}, rand() % 3, false);
                         // if (y < CHUNK_SIZE_Y / 2) {
-                        if (y < 1) {
-                            int material = rand() % 2 + 1;
+                        int material = 0;
+                        if (y == 3) {
+                            material = 3;
+                        }
+                        if (y == 2) {
+                            material = 2;
+                        }
+                        if (y == 1) {
+                            material = 1;
+                        }
+                        if (material > 0) {
                             setCellInChunk(loc, {x, y, z, u, v}, material, false);
                         }
                     }

@@ -49,7 +49,7 @@ mat4 rotationZ( in float angle ) {
 
 vec2 materialTexCoord(int material, int face, ivec3 inPosition) {
     float a2 = 0.0001;
-    int TEX_WIDTH = 2;
+    int TEX_WIDTH = 3;
     vec2 materialTexCoord = vec2(
         ((material - 1) % TEX_WIDTH) / float(TEX_WIDTH) + a2,
         ((material - 1) / TEX_WIDTH) / float(TEX_WIDTH) + a2
