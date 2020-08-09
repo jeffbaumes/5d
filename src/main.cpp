@@ -105,7 +105,7 @@ class App {
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+        window = glfwCreateWindow(WIDTH, HEIGHT, "5d", nullptr, nullptr);
         glfwSetWindowUserPointer(window, this);
         glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
         glfwSetKeyCallback(window, keyCallback);
@@ -526,7 +526,7 @@ class App {
 #include <string>
 #include <thread>
 #ifndef STEAMNETWORKINGSOCKETS_OPENSOURCE
-#include <steam/steam_api.h>
+// #include <steam/steam_api.h>
 #endif
 
 #ifdef WIN32
@@ -597,20 +597,20 @@ static void InitSteamDatagramConnectionSockets() {
     if (!GameNetworkingSockets_Init(nullptr, errMsg))
         FatalError("GameNetworkingSockets_Init failed.  %s", errMsg);
 #else
-    SteamDatagramClient_SetAppID(570);  // Just set something, doesn't matter what
-    //SteamDatagramClient_SetUniverse( k_EUniverseDev );
+    // SteamDatagramClient_SetAppID(570);  // Just set something, doesn't matter what
+    // //SteamDatagramClient_SetUniverse( k_EUniverseDev );
 
-    SteamDatagramErrMsg errMsg;
-    if (!SteamDatagramClient_Init(true, errMsg))
-        FatalError("SteamDatagramClient_Init failed.  %s", errMsg);
+    // SteamDatagramErrMsg errMsg;
+    // if (!SteamDatagramClient_Init(true, errMsg))
+    //     FatalError("SteamDatagramClient_Init failed.  %s", errMsg);
 
-    // Disable authentication when running with Steam, for this
-    // example, since we're not a real app.
-    //
-    // Authentication is disabled automatically in the open-source
-    // version since we don't have a trusted third party to issue
-    // certs.
-    SteamNetworkingUtils()->SetGlobalConfigValueInt32(k_ESteamNetworkingConfig_IP_AllowWithoutAuth, 1);
+    // // Disable authentication when running with Steam, for this
+    // // example, since we're not a real app.
+    // //
+    // // Authentication is disabled automatically in the open-source
+    // // version since we don't have a trusted third party to issue
+    // // certs.
+    // SteamNetworkingUtils()->SetGlobalConfigValueInt32(k_ESteamNetworkingConfig_IP_AllowWithoutAuth, 1);
 #endif
 
     g_logTimeZero = SteamNetworkingUtils()->GetLocalTimestamp();
@@ -629,7 +629,7 @@ static void ShutdownSteamDatagramConnectionSockets() {
 #ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
     GameNetworkingSockets_Kill();
 #else
-    SteamDatagramClient_Kill();
+    // SteamDatagramClient_Kill();
 #endif
 }
 
