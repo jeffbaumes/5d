@@ -9,10 +9,15 @@ pkg_search_module(GLFW REQUIRED glfw3)
 pkg_search_module(GLM REQUIRED glm)
 
 add_executable(5d
-  World.cpp
-  VulkanUtil.cpp
-  main.cpp
+  App.cpp
   Entity.cpp
+  VulkanUtil.cpp
+  World.cpp
+  WorldClient.cpp
+  WorldServer.cpp
+  main.cpp
+  util.cpp
+  vec5.cpp
 )
 
 add_dependencies(5d spv texture)

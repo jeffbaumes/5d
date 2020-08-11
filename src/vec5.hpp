@@ -1,5 +1,9 @@
-#ifndef D5_VEC5_H
-#define D5_VEC5_H
+#ifndef VEC5_HPP
+#define VEC5_HPP
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <iostream>
 
@@ -73,4 +77,19 @@ struct vector5 {
 typedef vector5<float> vec5;
 typedef vector5<int> ivec5;
 
-#endif
+template <typename T>
+float dot(const vector5<T> &a, const vector5<T> &b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.u * b.u + a.v * b.v;
+}
+
+vec5 normalize(vec5 a);
+vec5 project(vec5 a, vec5 b);
+vec5 round(vec5 a);
+vec5 floor(vec5 a);
+
+glm::vec3 project(glm::vec3 a, glm::vec3 b);
+
+// ProjectToPlane projects a vector onto a plane with a given normal
+glm::vec3 projectToPlane(glm::vec3 v, glm::vec3 n);
+
+#endif // VEC5_HPP
