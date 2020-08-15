@@ -1,6 +1,6 @@
-#include "App.hpp"
-#include "WorldClient.hpp"
-#include "WorldServer.hpp"
+#include "client/App.hpp"
+#include "client/WorldClient.hpp"
+#include "server/WorldServer.hpp"
 
 #include <thread>
 

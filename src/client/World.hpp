@@ -3,12 +3,12 @@
 
 #include <vector>
 #include <map>
-#include <sqlite3.h>
+// #include <sqlite3.h>
 
-#include "Chunk.hpp"
+#include "../common/Chunk.hpp"
 #include "VulkanUtil.hpp"
 #include "Entity.hpp"
-#include "vec5.hpp"
+#include "../common/vec5.hpp"
 
 
 struct ChunkNotLoadedException : public std::exception

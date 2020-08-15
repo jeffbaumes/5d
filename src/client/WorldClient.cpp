@@ -1,7 +1,7 @@
 #include "WorldClient.hpp"
 
-#include "vec5.hpp"
-#include "Chunk.hpp"
+#include "../common/vec5.hpp"
+#include "../common/Chunk.hpp"
 
 #include <algorithm>
 #include <sstream>

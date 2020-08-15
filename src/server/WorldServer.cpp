@@ -5,8 +5,8 @@
 #include <sstream>
 #include <thread>
 
-#include "Chunk.hpp"
-#include "vec5.hpp"
+#include "../common/Chunk.hpp"
+#include "../common/vec5.hpp"
 
 WorldServer *WorldServer::callbackInstance;
 

@@ -9,7 +9,7 @@
 #include <map>
 #include <vector>
 
-#include "vec5.hpp"
+#include "../common/vec5.hpp"
 #include "VulkanUtil.hpp"
 #include "World.hpp"
 

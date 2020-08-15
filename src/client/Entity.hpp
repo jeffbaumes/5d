@@ -2,7 +2,7 @@
 #define D5_ENTITY_H_
 
 #include "VulkanUtil.hpp"
-#include "vec5.hpp"
+#include "../common/vec5.hpp"
 #include <deque>
 
 class World;

@@ -3,9 +3,9 @@
 
 #include <queue>
 
-#include "util.hpp"
-#include "vec5.hpp"
-#include "Chunk.hpp"
+#include "../common/util.hpp"
+#include "../common/vec5.hpp"
+#include "../common/Chunk.hpp"
 
 class WorldClient {
    public:
