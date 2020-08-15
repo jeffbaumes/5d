@@ -42,11 +42,13 @@ int main(int argc, const char *argv[]) {
         }
         if (!strcmp(argv[i], "--port")) {
             ++i;
-            if (i >= argc)
+            if (i >= argc) {
                 printUsageAndExit();
+            }
             nPort = atoi(argv[i]);
-            if (nPort <= 0 || nPort > 65535)
+            if (nPort <= 0 || nPort > 65535) {
                 FatalError("Invalid port %d", nPort);
+            }
             continue;
         }
 
@@ -71,12 +73,12 @@ int main(int argc, const char *argv[]) {
     InitSteamDatagramConnectionSockets();
 
     if (bClient) {
-        std::thread *mainThread = new std::thread([addrServer]() {
-            WorldClient client;
-            client.Run(addrServer);
-        });
-
-        App app;
+        WorldClient client;
+        client.Run(addrServer);
+        // std::thread *mainThread = new std::thread([client, addrServer]() mutable {
+        //     client.Run(addrServer);
+        // });
+        App app(&client);
         app.run();
     } else {
         WorldServer server;

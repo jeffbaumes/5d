@@ -1,11 +1,19 @@
 #ifndef WORLD_CLIENT_HPP
 #define WORLD_CLIENT_HPP
 
+#include <queue>
+
 #include "util.hpp"
+#include "vec5.hpp"
+#include "Chunk.hpp"
 
 class WorldClient {
    public:
     void Run(const SteamNetworkingIPAddr &serverAddr);
+    void requestChunk(ChunkLoc loc);
+    void pollEvents();
+
+    std::queue<std::pair<ChunkLoc, Chunk> > requestedChunks;
 
    private:
     HSteamNetConnection connection;

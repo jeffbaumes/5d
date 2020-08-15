@@ -10,6 +10,7 @@ pkg_search_module(GLM REQUIRED glm)
 
 add_executable(5d
   App.cpp
+  Chunk.cpp
   Entity.cpp
   VulkanUtil.cpp
   World.cpp

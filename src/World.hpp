@@ -5,6 +5,7 @@
 #include <map>
 #include <sqlite3.h>
 
+#include "Chunk.hpp"
 #include "VulkanUtil.hpp"
 #include "Entity.hpp"
 #include "vec5.hpp"
@@ -19,23 +20,10 @@ struct ChunkNotLoadedException : public std::exception
 };
 
 
-const int CHUNK_SIZE_XZUV = 4;
-const int CHUNK_SIZE_Y = 16;
-const int CHUNK_SIZE = CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y;
 const int TEX_WIDTH = 3;
 const int MAX_INDIVIDUAL_CHANGES = 50;
 
-typedef ivec5 CellLoc;
-typedef ivec5 ChunkLoc;
-typedef ivec5 RelativeCellLoc;
 typedef std::array<int, 6> SideIndex;
-typedef int Cell;
-
-struct Chunk {
-    Chunk();
-    std::vector<Cell> cells;
-    Cell & operator[](const RelativeCellLoc loc);
-};
 
 namespace std {
 template <>
@@ -57,6 +45,8 @@ struct hash<ChunkLoc> {
 };
 }
 
+class WorldClient;
+
 class World {
    public:
     std::vector<Vertex> vertices;
@@ -72,10 +62,13 @@ class World {
     std::vector<int> unusedEntityIDS;
 
     World(VulkanUtil *vulkan);
-    World(VulkanUtil *vulkan, std::string dirname);
+    World(VulkanUtil *vulkan, WorldClient *client);
+    // World(VulkanUtil *vulkan, std::string dirname);
     ~World();
 
     void init();
+
+    void pollEvents();
 
     Cell getCell(CellLoc loc);
     Cell getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc);
@@ -101,6 +94,7 @@ class World {
 
    private:
     VulkanUtil *vulkan;
+    WorldClient *client = nullptr;
     bool running = false;
     std::unordered_map<ChunkLoc, Chunk> chunks;
     std::map<SideIndex, size_t> sideIndices;

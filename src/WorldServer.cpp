@@ -1,6 +1,12 @@
 #include "WorldServer.hpp"
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include <thread>
+
+#include "Chunk.hpp"
+#include "vec5.hpp"
 
 WorldServer *WorldServer::callbackInstance;
 
@@ -26,7 +32,6 @@ void WorldServer::Run(uint16 nPort) {
     while (!quit) {
         PollIncomingMessages();
         PollConnectionStateChanges();
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     // Close all the connections
@@ -63,29 +68,93 @@ void WorldServer::SendStringToAllClients(const char *str, HSteamNetConnection ex
     }
 }
 
+void WorldServer::generateChunk(ChunkLoc loc, Chunk &chunk) {
+    for (int x = 0; x < CHUNK_SIZE_XZUV; x += 1) {
+        for (int y = 0; y < CHUNK_SIZE_Y; y += 1) {
+            for (int z = 0; z < CHUNK_SIZE_XZUV; z += 1) {
+                for (int u = 0; u < CHUNK_SIZE_XZUV; u += 1) {
+                    for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
+                        int material = 0;
+                        if (y == 3) {
+                            material = 3;
+                        }
+                        if (y == 2) {
+                            material = 2;
+                        }
+                        if (y == 1) {
+                            material = 1;
+                        }
+                        if (material > 0) {
+                            chunk[{x, y, z, u, v}] = material;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void WorldServer::saveChunk(ChunkLoc loc, const Chunk &chunk) {
+    Printf("Saving a chunk (not really)");
+}
+
+void WorldServer::sendChunk(ChunkLoc loc, HSteamNetConnection connection) {
+    Chunk chunk;
+    std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
+    std::ifstream file(worldDir + "/" + filename, std::ios::out | std::ios::binary);
+    file.read(reinterpret_cast<char *>(chunk.cells.data()), sizeof(int) * CHUNK_SIZE);
+    if (!file.good()) {
+        generateChunk(loc, chunk);
+        saveChunk(loc, chunk);
+    }
+
+    // Send the chunk
+    Printf("Sending chunk");
+    loc.print();
+    std::stringstream msg;
+    msg.put(0);
+    msg.write(reinterpret_cast<char *>(&loc), sizeof(ChunkLoc));
+    msg.write(reinterpret_cast<char *>(chunk.cells.data()), sizeof(int) * CHUNK_SIZE);
+    interface->SendMessageToConnection(connection, msg.str().c_str(), msg.str().length(), k_nSteamNetworkingSend_Reliable, nullptr);
+}
+
 void WorldServer::PollIncomingMessages() {
     char temp[1024];
 
     while (!quit) {
         ISteamNetworkingMessage *incomingMsg = nullptr;
         int numMsgs = interface->ReceiveMessagesOnPollGroup(pollGroup, &incomingMsg, 1);
-        if (numMsgs == 0)
+        if (numMsgs == 0) {
             break;
-        if (numMsgs < 0)
+        }
+
+        if (numMsgs < 0) {
             FatalError("Error checking for messages");
+        }
         assert(numMsgs == 1 && incomingMsg);
         auto itClient = clients.find(incomingMsg->m_conn);
         assert(itClient != clients.end());
 
-        // '\0'-terminate it to make it easier to parse
-        std::string cmdString;
-        cmdString.assign((const char *)incomingMsg->m_pData, incomingMsg->m_cbSize);
-        const char *cmd = cmdString.c_str();
+        auto conn = incomingMsg->m_conn;
+        auto msg = static_cast<char *>(incomingMsg->m_pData);
+        auto len = incomingMsg->m_cbSize;
 
-        // We don't need this anymore.
-        incomingMsg->Release();
+        // Check message and perform action
+        size_t ind = 0;
+        if (msg[0] == 0) {
+            ind += 1;
+            auto locPtr = reinterpret_cast<int *>(&msg[ind]);
+            ChunkLoc loc(locPtr[0], locPtr[1], locPtr[2], locPtr[3], locPtr[4]);
+            incomingMsg->Release();
+            loc.print();
+            sendChunk(loc, conn);
 
-        // TODO: check message and perform action
+            // If we don't sleep a bit the UDP channel seems to get saturated and not
+            // all chunks make it to the client.
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        } else {
+            incomingMsg->Release();
+        }
     }
 }
 

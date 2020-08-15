@@ -1,7 +1,20 @@
 #include "App.hpp"
 
 #include "Entity.hpp"
+#include "WorldClient.hpp"
 
+App::App() {
+    world = new World(&vulkan);
+}
+
+App::App(WorldClient *client) {
+    world = new World(&vulkan, client);
+}
+
+App::~App() {
+    delete world;
+    world = nullptr;
+}
 
 void App::run() {
     initWindow();
@@ -30,24 +43,24 @@ void App::initVulkan() {
 }
 
 void App::initWorld() {
-    world.init();
-    // world.loadChunk({0, 0, 0, 0, 0});
-    auto entity = Entity(&world, 3);
+    world->init();
+    // world->loadChunk({0, 0, 0, 0, 0});
+    auto entity = Entity(world, 3);
     entity.init();
-    world.entities.push_back(entity);
+    world->entities.push_back(entity);
     int size = 1;
     for (int x = -size; x <= size; x += 1) {
         for (int z = -size; z <= size; z += 1) {
             for (int u = -size; u <= size; u += 1) {
                 for (int v = -size; v <= size; v += 1) {
                     std::cerr << x << "," << z << "," << u << "," << v << std::endl;
-                    world.loadChunk({x, 0, z, u, v});
+                    world->loadChunk({x, 0, z, u, v});
                 }
             }
         }
     }
-    world.printStats();
-    world.sendVerticesAndIndicesToVulkan();
+    world->printStats();
+    world->sendVerticesAndIndicesToVulkan();
 }
 
 void App::framebufferResizeCallback(GLFWwindow *window, int width, int height) {
@@ -63,17 +76,17 @@ void App::mouseButtonCallback(GLFWwindow *window, int button, int action, int mo
             app->cursorLocked = true;
             app->firstMousePosition = true;
         } else {
-            app->world.setCell(app->focusedCell, 0);
-            app->world.sendVerticesAndIndicesToVulkan();
-            app->world.saveChunk(app->world.chunkLocForCell(app->focusedCell));
+            app->world->setCell(app->focusedCell, 0);
+            app->world->sendVerticesAndIndicesToVulkan();
+            app->world->saveChunk(app->world->chunkLocForCell(app->focusedCell));
         }
     }
 
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
         if (app->cursorLocked) {
-            app->world.setCell(app->buildCell, app->buildMat);
-            app->world.sendVerticesAndIndicesToVulkan();
-            app->world.saveChunk(app->world.chunkLocForCell(app->buildCell));
+            app->world->setCell(app->buildCell, app->buildMat);
+            app->world->sendVerticesAndIndicesToVulkan();
+            app->world->saveChunk(app->world->chunkLocForCell(app->buildCell));
         }
     }
 }
@@ -154,6 +167,7 @@ void App::mainLoop() {
         glfwPollEvents();
         updateUniforms();
         vulkan.draw();
+        world->pollEvents();
     }
 }
 
@@ -194,7 +208,7 @@ void App::collide(float h, int x, int y, int z, int u, int v) {
     vec5 d(x, y, z, u, v);
     vec5 cell = floor(pos) + 0.5f;
     vec5 adjCell = cell + d;
-    int material = world.getCell(floor(adjCell));
+    int material = world->getCell(floor(adjCell));
     if (material != 0) {
         if (y != 0) {
             // TODO
@@ -217,7 +231,7 @@ void App::updatePosition(float time) {
     glm::vec3 right = glm::cross(lookHeading, up);
     vec5 feet = location;
     feet.y -= height;
-    int feetCell = world.getCell(floor(feet));
+    int feetCell = world->getCell(floor(feet));
     bool falling = feetCell == 0 && !flying;
     if (falling) {
         fallVel -= 20.0f * time;
@@ -308,7 +322,7 @@ void App::updatePosition(float time) {
     for (int i = 0; i < 100; i++) {
         pos = pos + increment;
         CellLoc cellLoc = floor(pos);
-        int cell = world.getCell(cellLoc);
+        int cell = world->getCell(cellLoc);
         if (cell != 0) {
             focusedCell = cellLoc;
             buildCell = prevCell;
@@ -330,11 +344,11 @@ void App::updateUniforms() {
     float timeDelta = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
     lastTime = currentTime;
 
-    // world.entities[0].location = {glm::sin(time) * 2 + 2, 2, glm::sin(time) * 2 + 2, 0, 0};
-    // world.entities[0].location = {glm::sin(time), 2, 2, floor(uv.x), floor(uv.y)};
-    world.entities[0].location = {2 + glm::sin(time), 2, 2, 2, 2};
-    world.entities[0].rotation = glm::vec3(glm::sin(time), glm::sin(time), 0);
-    // std::cout << world.entities[0].location.u << "," << world.entities[0].location.v << "," << world.entities[0].location.x << "," << std::endl;
+    // world->entities[0].location = {glm::sin(time) * 2 + 2, 2, glm::sin(time) * 2 + 2, 0, 0};
+    // world->entities[0].location = {glm::sin(time), 2, 2, floor(uv.x), floor(uv.y)};
+    world->entities[0].location = {2 + glm::sin(time), 2, 2, 2, 2};
+    world->entities[0].rotation = glm::vec3(glm::sin(time), glm::sin(time), 0);
+    // std::cout << world->entities[0].location.u << "," << world->entities[0].location.v << "," << world->entities[0].location.x << "," << std::endl;
     // std::cout << loc.x << "," << loc.y << "," << loc.z << "," << uv.x << "," << uv.y << std::endl;
 
     updatePosition(timeDelta);
@@ -365,11 +379,11 @@ void App::updateUniforms() {
 
     // std::cerr << "before" << std::endl << std::flush;
 
-    world.updateUBO(&ubo);
+    world->updateUBO(&ubo);
 
     // std::cerr << "after" << std::endl << std::flush;
 
-    // std::cout << ubo.entityLocationUV[world.entities[0].id()].x << "," << ubo.entityLocationUV[world.entities[0].id()].y << "," << ubo.entityLocationXYZ[world.entities[0].id()].z << "," << std::endl;
+    // std::cout << ubo.entityLocationUV[world->entities[0].id()].x << "," << ubo.entityLocationUV[world->entities[0].id()].y << "," << ubo.entityLocationXYZ[world->entities[0].id()].z << "," << std::endl;
 
     vulkan.ubo = ubo;
 }

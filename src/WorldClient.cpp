@@ -1,5 +1,10 @@
 #include "WorldClient.hpp"
 
+#include "vec5.hpp"
+#include "Chunk.hpp"
+
+#include <algorithm>
+#include <sstream>
 #include <thread>
 
 WorldClient *WorldClient::callbackInstance;
@@ -19,12 +24,24 @@ void WorldClient::Run(const SteamNetworkingIPAddr &serverAddr) {
         FatalError("Failed to create connection");
     }
 
-    while (!quit) {
-        PollIncomingMessages();
-        PollConnectionStateChanges();
-        // PollLocalUserInput();
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+    // while (!quit) {
+    //     PollIncomingMessages();
+    //     PollConnectionStateChanges();
+    //     // PollLocalUserInput();
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    // }
+}
+
+void WorldClient::pollEvents() {
+    PollIncomingMessages();
+    PollConnectionStateChanges();
+}
+
+void WorldClient::requestChunk(ChunkLoc loc) {
+    std::stringstream msg;
+    msg.put(0);
+    msg.write(reinterpret_cast<char *>(&loc), sizeof(loc));
+    interface->SendMessageToConnection(connection, msg.str().c_str(), msg.str().length(), k_nSteamNetworkingSend_Reliable, nullptr);
 }
 
 void WorldClient::PollIncomingMessages() {
@@ -38,9 +55,30 @@ void WorldClient::PollIncomingMessages() {
             FatalError("Error checking for messages");
         }
 
-        // Just echo anything we get from the server
-        fwrite(incomingMsg->m_pData, 1, incomingMsg->m_cbSize, stdout);
-        fputc('\n', stdout);
+        auto msg = static_cast<char *>(incomingMsg->m_pData);
+        auto len = incomingMsg->m_cbSize;
+
+        Printf("Got something back of size %d", len);
+
+        size_t ind = 0;
+        if (msg[ind] == 0) {
+            ind += 1;
+            Printf("Got a chunk");
+
+            auto locPtr = reinterpret_cast<int *>(&msg[ind]);
+            ind += sizeof(ChunkLoc);
+            ChunkLoc loc(locPtr[0], locPtr[1], locPtr[2], locPtr[3], locPtr[4]);
+            loc.print();
+
+            auto chunkData = reinterpret_cast<int *>(&msg[ind]);
+            Chunk chunk;
+            std::copy(chunkData, chunkData + CHUNK_SIZE, chunk.cells.begin());
+
+            requestedChunks.push(std::pair<ChunkLoc, Chunk>(loc, chunk));
+        } else {
+            std::cout.write(msg, len);
+            std::cout << std::endl;
+        }
 
         // We don't need this anymore.
         incomingMsg->Release();

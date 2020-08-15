@@ -6,6 +6,7 @@
 #include <stdexcept>
 
 #include "Entity.hpp"
+#include "WorldClient.hpp"
 
 /**
  * Divide one integer by another, rounding towards minus infinity.
@@ -35,13 +36,32 @@ int mod_floor(int x, int y) {
     return r;
 }
 
-Chunk::Chunk() {
-    cells.resize(CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV, 0);
-}
-
-Cell &Chunk::operator[](const RelativeCellLoc loc) {
-    int size = CHUNK_SIZE_XZUV;
-    return cells.at(loc.x + size * loc.y + size * CHUNK_SIZE_Y * loc.z + size * CHUNK_SIZE_Y * size * loc.u + size * CHUNK_SIZE_Y * size * size * loc.v);
+void World::pollEvents() {
+    if (client) {
+        client->pollEvents();
+        if (!client->requestedChunks.empty()) {
+            auto locChunk = client->requestedChunks.front();
+            client->requestedChunks.pop();
+            auto loc = locChunk.first;
+            auto chunk = locChunk.second;
+            chunks[loc] = chunk;
+            std::cout << "Adding chunk" << std::endl;
+            loc.print();
+            for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
+                for (int y = 0; y < CHUNK_SIZE_Y; y++) {
+                    for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
+                        for (int u = 0; u < CHUNK_SIZE_XZUV; u++) {
+                            for (int v = 0; v < CHUNK_SIZE_XZUV; v++) {
+                                RelativeCellLoc rel = {x, y, z, u, v};
+                                setCellInChunk(loc, rel, chunk[rel], false);
+                            }
+                        }
+                    }
+                }
+            }
+            sendVerticesAndIndicesToVulkan();
+        }
+    }
 }
 
 ChunkLoc World::chunkLocForCell(CellLoc loc) {
@@ -73,7 +93,6 @@ Cell World::getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc relLoc) {
 
     if (result == chunks.end()) {
         return 0;
-        // throw ChunkNotLoadedException();
     }
 
     return (*result).second[relLoc];
@@ -222,27 +241,28 @@ void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData
 };
 
 void World::loadChunk(ChunkLoc loc) {
-    std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
-    std::ifstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
+    if (client) {
+        client->requestChunk(loc);
+        return;
+    }
 
     Chunk chunk;
 
+    std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
+    std::ifstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
     file.read((char *) chunk.cells.data(), sizeof(int) * chunk.cells.size());
-
     chunks[loc] = chunk;
-
     if(!file.good()) {
         generateChunk(loc);
         return;
     }
+    file.close();
 
-    int size = CHUNK_SIZE_XZUV;
-
-    for (int x = 0; x < size; x++) {
+    for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
         for (int y = 0; y < CHUNK_SIZE_Y; y++) {
-            for (int z = 0; z < size; z++) {
-                for (int u = 0; u < size; u++) {
-                    for (int v = 0; v < size; v++) {
+            for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
+                for (int u = 0; u < CHUNK_SIZE_XZUV; u++) {
+                    for (int v = 0; v < CHUNK_SIZE_XZUV; v++) {
                         RelativeCellLoc rel = {x, y, z, u, v};
                         setCellInChunk(loc, rel, chunk[rel], false);
                     }
@@ -250,7 +270,6 @@ void World::loadChunk(ChunkLoc loc) {
             }
         }
     }
-    file.close();
 }
 
 void World::unloadChunk(ChunkLoc loc) {
@@ -321,27 +340,34 @@ void World::printStats() {
     std::cout << "Number of chunks: " << chunks.size() << std::endl;
     std::cout << "Number of indices: " << indicesIndex << std::endl;
     std::cout << "Number of vertices: " << verticesIndex << std::endl;
-    std::cout << "Indices per chunk: " << indicesIndex / chunks.size() << std::endl;
-    std::cout << "Vertices per chunk: " << verticesIndex / chunks.size() << std::endl;
+    if (chunks.size() > 0) {
+        std::cout << "Indices per chunk: " << indicesIndex / chunks.size() << std::endl;
+        std::cout << "Vertices per chunk: " << verticesIndex / chunks.size() << std::endl;
+    }
     std::cout << "Indices capacity: " << indices.size() << std::endl;
     std::cout << "Vertices capacity: " << vertices.size() << std::endl;
     std::cout << "Empty side indices slots: " << emptySideIndices.size() << std::endl;
     std::cout << "Empty side vertices slots: " << emptySideVertices.size() << std::endl;
 }
 
-World::World(VulkanUtil *vulkan) {
+World::World(VulkanUtil *_vulkan) {
     dirname = "world";
-    this->vulkan = vulkan;
+    vulkan = _vulkan;
+}
+
+World::World(VulkanUtil *_vulkan, WorldClient *_client) {
+    vulkan = _vulkan;
+    client = _client;
 }
 
 World::~World() {
     destroy();
 }
 
-World::World(VulkanUtil *vulkan, std::string dirname) {
-    this->dirname = dirname;
-    this->vulkan = vulkan;
-}
+// World::World(VulkanUtil *vulkan, std::string dirname) {
+//     this->dirname = dirname;
+//     this->vulkan = vulkan;
+// }
 
 void World::init() {
     vertices.resize(100 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 4, {0, {0, 0, 0}, {0, 0}});

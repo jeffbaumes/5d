@@ -13,6 +13,8 @@
 #include "VulkanUtil.hpp"
 #include "World.hpp"
 
+class WorldClient;
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const float ANIMATION_TIME = 2.0f;
@@ -21,35 +23,31 @@ typedef std::array<int, 6> SideIndex;
 
 class App {
    public:
+    App();
+    App(WorldClient *client);
+    ~App();
+
     void run();
 
    private:
     GLFWwindow *window;
     VulkanUtil vulkan;
-    World world = World(&vulkan);
+    World *world;
     std::vector<int> cells;
     std::map<SideIndex, size_t> sideIndices;
 
     int buildMat = 1;
-
     bool cursorLocked = false;
     bool firstMousePosition = true;
-
     bool framebufferResized = false;
-
     double lastX = 0;
     double lastY = 0;
 
     void initWindow();
-
     void initVulkan();
-
     void initWorld();
-
     static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
-
     static void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
-
     static void cursorPositionCallback(GLFWwindow *window, double xpos, double ypos);
     static void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
     void mainLoop();
@@ -66,7 +64,7 @@ class App {
     bool uvTravel = false;
     float fallVel = 0.0f;
     float walkVel = 2.0f;
-    bool flying = false;
+    bool flying = true;
     vec5 location = {
         CHUNK_SIZE_XZUV / 2 + 0.5f,
         CHUNK_SIZE_Y / 2 + 3,
