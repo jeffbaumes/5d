@@ -45,37 +45,11 @@ void World::pollEvents() {
             client->requestedChunks.pop();
             auto loc = locChunk.first;
             auto chunk = locChunk.second;
+            chunk.generateGeometry();
             chunks[loc] = chunk;
             std::cout << "Adding chunk" << std::endl;
             loc.print();
-            sendVerticesAndIndicesToVulkan();
-            int startIndicesIndex = indicesIndex;
-            int startVerticesIndex = verticesIndex;
-            auto startTime = std::chrono::high_resolution_clock::now();
-            for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
-                for (int y = 0; y < CHUNK_SIZE_Y; y++) {
-                    for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
-                        for (int u = 0; u < CHUNK_SIZE_XZUV; u++) {
-                            for (int v = 0; v < CHUNK_SIZE_XZUV; v++) {
-                                RelativeCellLoc rel = {x, y, z, u, v};
-                                setCellInChunk(loc, rel, chunk[rel], false, startIndicesIndex, startVerticesIndex);
-                            }
-                        }
-                    }
-                }
-            }
-
-            auto endTime = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
-            auto startTime2 = std::chrono::high_resolution_clock::now();
-            std::cout << "T: " << indicesIndex - startIndicesIndex << std::endl
-                      << std::flush;
-            vulkan->resetIndexRange(indices, startIndicesIndex, indicesIndex - startIndicesIndex);
-            vulkan->resetVertexRange(vertices, startVerticesIndex, verticesIndex - startVerticesIndex);
-            auto endTime2 = std::chrono::high_resolution_clock::now();
-            auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(endTime2 - startTime2).count();
-            std::cout << duration << " " << duration2 << std::endl
-                      << std::flush;
+            updateVulkan();
         }
     }
 }
@@ -124,137 +98,10 @@ void World::setCell(CellLoc loc, Cell cellData) {
     relCell.u = mod_floor(loc.u, CHUNK_SIZE_XZUV);
     relCell.v = mod_floor(loc.v, CHUNK_SIZE_XZUV);
 
-    setCellInChunk(chunkLoc, relCell, cellData, true);
+    chunks[chunkLoc].setCell(relCell, cellData);
+
+    updateVulkan();
 }
-
-void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData, bool sendVertices, int fillIndicesStart, int fillVerticesStart) {
-    auto result = chunks.find(chunkLoc);
-
-    if (result == chunks.end()) {
-        // throw ChunkNotLoadedException();
-        std::cerr << "Chunk not loaded in setCellInChunk" << std::endl;
-        return;
-    }
-
-    int x = chunkLoc.x * CHUNK_SIZE_XZUV + loc.x;
-    int y = chunkLoc.y * CHUNK_SIZE_Y    + loc.y;
-    int z = chunkLoc.z * CHUNK_SIZE_XZUV + loc.z;
-    int u = chunkLoc.u * CHUNK_SIZE_XZUV + loc.u;
-    int v = chunkLoc.v * CHUNK_SIZE_XZUV + loc.v;
-
-    chunks[chunkLoc][loc] = cellData;
-
-    // Trivial algorithm
-
-    // if (cellData == 0) {
-    //     for (int side = -3; side <= 3; side += 1) {
-    //         if (side != 0) {
-    //             removeSide({x, y, z, u, v}, side);
-    //         }
-    //     }
-    // } else {
-    //     for (int side = -3; side <= 3; side += 1) {
-    //         if (side != 0) {
-    //             createSide({x, y, z, u, v}, side);
-    //         }
-    //     }
-    // }
-    // return;
-
-    // Smarter algorithm
-
-    if (cellData == 0) {
-        for (int side = -3; side <= 3; side += 1) {
-            if (side != 0) {
-                removeSide({x, y, z, u, v}, side);
-            }
-        }
-        if (getCell({x - 1, y, z, u, v}) != 0) {
-            createSide({x - 1, y, z, u, v}, 1, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x, y, z, u - 1, v}) != 0) {
-            createSide({x, y, z, u - 1, v}, 1, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x + 1, y, z, u, v}) != 0) {
-            createSide({x + 1, y, z, u, v}, -1, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x, y, z, u + 1, v}) != 0) {
-            createSide({x, y, z, u + 1, v}, -1, fillIndicesStart, fillVerticesStart);
-        }
-
-        if (getCell({x, y - 1, z, u, v}) != 0) {
-            createSide({x, y - 1, z, u, v}, 2, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x, y + 1, z, u, v}) != 0) {
-            createSide({x, y + 1, z, u, v}, -2, fillIndicesStart, fillVerticesStart);
-        }
-
-        if (getCell({x, y, z - 1, u, v}) != 0) {
-            createSide({x, y, z - 1, u, v}, 3, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x, y, z, u, v - 1}) != 0) {
-            createSide({x, y, z, u, v - 1}, 3, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x, y, z + 1, u, v}) != 0) {
-            createSide({x, y, z + 1, u, v}, -3, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x, y, z, u, v + 1}) != 0) {
-            createSide({x, y, z, u, v + 1}, -3, fillIndicesStart, fillVerticesStart);
-        }
-    } else {
-        if (getCell({x - 1, y, z, u, v}) == 0 || getCell({x, y, z, u - 1, v}) == 0) {
-            createSide({x, y, z, u, v}, -1, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x - 1, y, z, u, v}) != 0 && getCell({x - 1, y, z, u + 1, v}) != 0) {
-            removeSide({x - 1, y, z, u, v}, 1);
-        }
-        if (getCell({x, y, z, u - 1, v}) != 0 && getCell({x + 1, y, z, u - 1, v}) != 0) {
-            removeSide({x, y, z, u - 1, v}, 1);
-        }
-
-        if (getCell({x + 1, y, z, u, v}) == 0 || getCell({x, y, z, u + 1, v}) == 0) {
-            createSide({x, y, z, u, v}, 1, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x + 1, y, z, u, v}) != 0 && getCell({x + 1, y, z, u - 1, v}) != 0) {
-            removeSide({x + 1, y, z, u, v}, -1);
-        }
-        if (getCell({x, y, z, u + 1, v}) != 0 && getCell({x - 1, y, z, u + 1, v}) != 0) {
-            removeSide({x, y, z, u + 1, v}, -1);
-        }
-
-        if (getCell({x, y - 1, z, u, v}) == 0) {
-            createSide({x, y, z, u, v}, -2, fillIndicesStart, fillVerticesStart);
-        } else {
-            removeSide({x, y - 1, z, u, v}, 2);
-        }
-
-        if (getCell({x, y + 1, z, u, v}) == 0) {
-            createSide({x, y, z, u, v}, 2, fillIndicesStart, fillVerticesStart);
-        } else {
-            removeSide({x, y + 1, z, u, v}, -2);
-        }
-
-        if (getCell({x, y, z - 1, u, v}) == 0 || getCell({x, y, z, u, v - 1}) == 0) {
-            createSide({x, y, z, u, v}, -3, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x, y, z - 1, u, v}) != 0 && getCell({x, y, z - 1, u, v + 1}) != 0) {
-            removeSide({x, y, z - 1, u, v}, 3);
-        }
-        if (getCell({x, y, z, u, v - 1}) != 0 && getCell({x, y, z + 1, u, v - 1}) != 0) {
-            removeSide({x, y, z, u, v - 1}, 3);
-        }
-
-        if (getCell({x, y, z + 1, u, v}) == 0 || getCell({x, y, z, u, v + 1}) == 0) {
-            createSide({x, y, z, u, v}, 3, fillIndicesStart, fillVerticesStart);
-        }
-        if (getCell({x, y, z + 1, u, v}) != 0 && getCell({x, y, z + 1, u, v - 1}) != 0) {
-            removeSide({x, y, z + 1, u, v}, -3);
-        }
-        if (getCell({x, y, z, u, v + 1}) != 0 && getCell({x, y, z - 1, u, v + 1}) != 0) {
-            removeSide({x, y, z, u, v + 1}, -3);
-        }
-    }
-};
 
 void World::loadChunk(ChunkLoc loc) {
     if (client) {
@@ -262,95 +109,95 @@ void World::loadChunk(ChunkLoc loc) {
         return;
     }
 
-    Chunk chunk;
+    // Chunk chunk;
 
-    std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
-    std::ifstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
-    file.read((char *) chunk.cells.data(), sizeof(int) * chunk.cells.size());
-    chunks[loc] = chunk;
-    if(!file.good()) {
-        generateChunk(loc);
-        return;
-    }
-    file.close();
+    // std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
+    // std::ifstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
+    // file.read((char *) chunk.cells.data(), sizeof(int) * chunk.cells.size());
+    // chunks[loc] = chunk;
+    // if(!file.good()) {
+    //     generateChunk(loc);
+    //     return;
+    // }
+    // file.close();
 
-    for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
-        for (int y = 0; y < CHUNK_SIZE_Y; y++) {
-            for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
-                for (int u = 0; u < CHUNK_SIZE_XZUV; u++) {
-                    for (int v = 0; v < CHUNK_SIZE_XZUV; v++) {
-                        RelativeCellLoc rel = {x, y, z, u, v};
-                        setCellInChunk(loc, rel, chunk[rel], false);
-                    }
-                }
-            }
-        }
-    }
+    // for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
+    //     for (int y = 0; y < CHUNK_SIZE_Y; y++) {
+    //         for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
+    //             for (int u = 0; u < CHUNK_SIZE_XZUV; u++) {
+    //                 for (int v = 0; v < CHUNK_SIZE_XZUV; v++) {
+    //                     RelativeCellLoc rel = {x, y, z, u, v};
+    //                     setCellInChunk(loc, rel, chunk[rel], false);
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }
 
-void World::unloadChunk(ChunkLoc loc) {
+// void World::unloadChunk(ChunkLoc loc) {
 
-    int size = CHUNK_SIZE_XZUV;
+//     int size = CHUNK_SIZE_XZUV;
 
-    for (int x = 0; x < size; x++) {
-        for (int y = 0; y < CHUNK_SIZE_Y; y++) {
-            for (int z = 0; z < size; z++) {
-                for (int u = 0; u < size; u++) {
-                    for (int v = 0; v < size; v++) {
-                        RelativeCellLoc rel = {x, y, z, u, v};
-                        setCellInChunk(loc, rel, 0, false);
-                    }
-                }
-            }
-        }
-    }
-}
+//     for (int x = 0; x < size; x++) {
+//         for (int y = 0; y < CHUNK_SIZE_Y; y++) {
+//             for (int z = 0; z < size; z++) {
+//                 for (int u = 0; u < size; u++) {
+//                     for (int v = 0; v < size; v++) {
+//                         RelativeCellLoc rel = {x, y, z, u, v};
+//                         setCellInChunk(loc, rel, 0, false);
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
 
-void World::saveChunk(ChunkLoc loc) {
+// void World::saveChunk(ChunkLoc loc) {
 
-    auto chunk = chunks.find(loc);
+//     auto chunk = chunks.find(loc);
 
-    if (chunk == chunks.end()) {
-        // throw ChunkNotLoadedException();
-        std::cerr << "Chunk not loaded in saveChunk" << std::endl;
-        return;
-    }
+//     if (chunk == chunks.end()) {
+//         // throw ChunkNotLoadedException();
+//         std::cerr << "Chunk not loaded in saveChunk" << std::endl;
+//         return;
+//     }
 
-    std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
-    std::ofstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
+//     std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
+//     std::ofstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
 
-    file.write((char *) chunks[loc].cells.data(), sizeof(chunks[loc].cells[0]) * chunks[loc].cells.size());
+//     file.write((char *) chunks[loc].cells.data(), sizeof(chunks[loc].cells[0]) * chunks[loc].cells.size());
 
-    file.close();
-}
+//     file.close();
+// }
 
-void World::generateChunk(ChunkLoc loc) {
-    for (int x = 0; x < CHUNK_SIZE_XZUV; x += 1) {
-        for (int y = 0; y < CHUNK_SIZE_Y; y += 1) {
-            for (int z = 0; z < CHUNK_SIZE_XZUV; z += 1) {
-                for (int u = 0; u < CHUNK_SIZE_XZUV; u += 1) {
-                    for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
-                        // setCellInChunk(loc, {x, y, z, u, v}, rand() % 3, false);
-                        // if (y < CHUNK_SIZE_Y / 2) {
-                        int material = 0;
-                        if (y == 3) {
-                            material = 3;
-                        }
-                        if (y == 2) {
-                            material = 2;
-                        }
-                        if (y == 1) {
-                            material = 1;
-                        }
-                        if (material > 0) {
-                            setCellInChunk(loc, {x, y, z, u, v}, material, false);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+// void World::generateChunk(ChunkLoc loc) {
+//     for (int x = 0; x < CHUNK_SIZE_XZUV; x += 1) {
+//         for (int y = 0; y < CHUNK_SIZE_Y; y += 1) {
+//             for (int z = 0; z < CHUNK_SIZE_XZUV; z += 1) {
+//                 for (int u = 0; u < CHUNK_SIZE_XZUV; u += 1) {
+//                     for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
+//                         // setCellInChunk(loc, {x, y, z, u, v}, rand() % 3, false);
+//                         // if (y < CHUNK_SIZE_Y / 2) {
+//                         int material = 0;
+//                         if (y == 3) {
+//                             material = 3;
+//                         }
+//                         if (y == 2) {
+//                             material = 2;
+//                         }
+//                         if (y == 1) {
+//                             material = 1;
+//                         }
+//                         if (material > 0) {
+//                             setCellInChunk(loc, {x, y, z, u, v}, material, false);
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
 
 void World::printStats() {
     std::cout << "Number of chunks: " << chunks.size() << std::endl;
@@ -362,8 +209,63 @@ void World::printStats() {
     }
     std::cout << "Indices capacity: " << indices.size() << std::endl;
     std::cout << "Vertices capacity: " << vertices.size() << std::endl;
-    std::cout << "Empty side indices slots: " << emptySideIndices.size() << std::endl;
-    std::cout << "Empty side vertices slots: " << emptySideVertices.size() << std::endl;
+    std::cout << "Empty chunk indices slots: " << emptyChunkIndices.size() << std::endl;
+    std::cout << "Empty chunk vertices slots: " << emptyChunkVertices.size() << std::endl;
+}
+
+void World::unloadChunk(ChunkLoc loc) {
+    chunks.erase(loc);
+    std::vector<uint> allocsIndices = chunkIndicesIndices[loc];
+    for (int i = 0; i < allocsIndices.size(); i++) {
+        uint allocIndex = allocsIndices[i];
+        emptyChunkIndices.push_back(allocIndex);
+        vulkan->resetIndexRange(EMPTY_INDICES_CHUNK_BLOCK, allocIndex * CHUNK_BLOCK_SIZE, CHUNK_BLOCK_SIZE, i * CHUNK_BLOCK_SIZE);
+    }
+    chunkIndicesIndices.erase(loc);
+
+
+    std::vector<uint> allocsVertices = chunkVerticesIndices[loc];
+    for (int i = 0; i < allocsVertices.size(); i++) {
+        uint allocIndex = allocsVertices[i];
+        emptyChunkVertices.push_back(allocIndex);
+        vulkan->resetVertexRange(EMPTY_VERTICES_CHUNK_BLOCK, allocIndex * CHUNK_BLOCK_SIZE, CHUNK_BLOCK_SIZE, i * CHUNK_BLOCK_SIZE);
+    }
+
+    chunkVerticesIndices.erase(loc);
+}
+
+void World::updateVulkan() {
+    for (auto const &[loc, chunk] : chunks) {
+        std::vector<uint> allocsIndices = chunkIndicesIndices[loc];
+        while (chunk.indices.size() > allocsIndices.size() * CHUNK_BLOCK_SIZE) {
+            if (emptyChunkIndices.size() > 0) {
+                allocsIndices.push_back(emptyChunkIndices.back());
+                emptyChunkIndices.pop_back();
+            } else {
+                allocsIndices.push_back(indicesIndex);
+                indicesIndex++;
+            }
+        }
+        for (int i = 0; i < allocsIndices.size(); i++) {
+            uint allocIndex = allocsIndices[i];
+            vulkan->resetIndexRange(chunk.indices, allocIndex * CHUNK_BLOCK_SIZE, CHUNK_BLOCK_SIZE, i * CHUNK_BLOCK_SIZE);
+        }
+
+        std::vector<uint> allocsVertices = chunkVerticesIndices[loc];
+        while (chunk.vertices.size() > allocsVertices.size() * CHUNK_BLOCK_SIZE) {
+            if (emptyChunkVertices.size() > 0) {
+                allocsVertices.push_back(emptyChunkVertices.back());
+                emptyChunkVertices.pop_back();
+            } else {
+                allocsVertices.push_back(verticesIndex);
+                verticesIndex++;
+            }
+        }
+        for (int i = 0; i < allocsVertices.size(); i++) {
+            uint allocIndex = allocsVertices[i];
+            vulkan->resetVertexRange(chunk.vertices, allocIndex * CHUNK_BLOCK_SIZE, CHUNK_BLOCK_SIZE, i * CHUNK_BLOCK_SIZE);
+        }
+    }
 }
 
 World::World(VulkanUtil *_vulkan) {
@@ -393,190 +295,36 @@ void World::init() {
     for (int x = 0; x < MAX_ENTITYS; x++) {
         unusedEntityIDS.push_back(x);
     }
-
+    vulkan->setVerticesAndIndices(vertices, indices);
     verticesIndex++;
 }
 
 void World::destroy() {
 }
 
-void World::createSide(CellLoc loc, int side, Cell cellData, int fillIndicesStart, int fillVerticesStart) {
-    SideIndex sideIndex = {loc.x, loc.y, loc.z, loc.u, loc.v, side};
-
-    if (sideIndices.count(sideIndex)) {
-        return;
-    }
-
-    int emptyIndicesSlotIndex = -1;
-    size_t originalIndicesIndex = indicesIndex;
-    int emptyVerticesSlotIndex = -1;
-    size_t originalVerticesIndex = verticesIndex;
-    if (emptySideIndices.size() > 0) {
-        int i;
-        for (i = emptySideIndices.size() - 1; emptySideIndices[i] < fillIndicesStart; i--) {}
-        indicesIndex = emptySideIndices[i];
-        emptyIndicesSlotIndex = i;
-        if (i == -1) {
-            indicesIndex = originalIndicesIndex;
-            emptyIndicesSlotIndex = i;
-        } else {
-            emptySideIndices.erase(emptySideIndices.begin() + i);
-        }
-    }
-    if (emptySideVertices.size() > 0) {
-        int i;
-        for (i = emptySideVertices.size() - 1; emptySideVertices[i] < fillVerticesStart; i--) {
-        }
-        verticesIndex = emptySideVertices[i];
-        emptyVerticesSlotIndex = i;
-        if (i == -1) {
-            verticesIndex = originalVerticesIndex;
-            emptyVerticesSlotIndex = i;
-        } else {
-            emptySideVertices.erase(emptySideVertices.begin() + i);
-        }
-    }
-
-    changedIndices.push_back(indicesIndex);
-    changedVertices.push_back(verticesIndex);
-
-    sideIndices[sideIndex] = indicesIndex;
-    sideVertices[sideIndex] = verticesIndex;
-
-    Cell mat = getCell(loc);
-    if (cellData != -1) {
-        mat = cellData;
-    };
-
-    auto xyz = glm::i16vec3(loc.x, loc.y, loc.z);
-    auto uv = glm::i16vec2(loc.u, loc.v);
-
-    uint16_t sp = ((mat << 3) + side + 3) << 3;
-
-    if (side == -3) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b000), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b010), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 3;
-        indices[indicesIndex + 5] = verticesIndex + 1;
-    } else if (side == 3) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 2;
-        indices[indicesIndex + 5] = verticesIndex + 3;
-    } else if (side == -1) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b000), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b010), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 3;
-        indices[indicesIndex + 5] = verticesIndex + 1;
-    } else if (side == 1) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 2;
-        indices[indicesIndex + 5] = verticesIndex + 3;
-    } else if (side == -2) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b000), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 2;
-        indices[indicesIndex + 5] = verticesIndex + 3;
-    } else if (side == 2) {
-        vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b010), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 3;
-        indices[indicesIndex + 5] = verticesIndex + 1;
-    }
-
-    if (emptyIndicesSlotIndex != -1) {
-        indicesIndex = originalIndicesIndex;
-    } else {
-        indicesIndex += 6;
-    }
-    if (emptyVerticesSlotIndex != -1) {
-        verticesIndex = originalVerticesIndex;
-    } else {
-        verticesIndex += 4;
-    }
-}
-
-void World::removeSide(CellLoc loc, int side) {
-    SideIndex sideIndex = {loc.x, loc.y, loc.z, loc.u, loc.v, side};
-    if (sideIndices.count(sideIndex) && sideVertices.count(sideIndex)) {
-        size_t index = sideIndices[sideIndex];
-        for (size_t i = index; i < index + 6; i += 1) {
-            indices[i] = 0;
-        }
-        sideIndices.erase(sideIndex);
-        emptySideIndices.push_back(index);
-        changedIndices.push_back(index);
-
-        index = sideVertices[sideIndex];
-        for (size_t i = index; i < index + 4; i += 1) {
-            vertices[i] = {};
-        }
-        sideVertices.erase(sideIndex);
-        emptySideVertices.push_back(index);
-        changedVertices.push_back(index);
-    }
-}
-
-void World::sendVerticesAndIndicesToVulkan() {
-    if (running) {
-        if (changedIndices.size() < MAX_INDIVIDUAL_CHANGES && changedVertices.size() < MAX_INDIVIDUAL_CHANGES) {
-            for (auto changedIndex : changedIndices) {
-                vulkan->resetIndexRange(indices, changedIndex, 6);
-            }
-            for (auto changedVertex : changedVertices) {
-                vulkan->resetVertexRange(vertices, changedVertex, 4);
-            }
-        } else {
-            vulkan->resetIndexRange(indices, 0, indicesIndex);
-            vulkan->resetVertexRange(vertices, 0, verticesIndex);
-        }
-    } else {
-        vulkan->setVerticesAndIndices(vertices, indices);
-    }
-    running = true;
-    changedVertices.clear();
-    changedIndices.clear();
-}
+// void World::sendVerticesAndIndicesToVulkan() {
+//     if (running) {
+//         if (changedIndices.size() < MAX_INDIVIDUAL_CHANGES && changedVertices.size() < MAX_INDIVIDUAL_CHANGES) {
+//             for (auto changedIndex : changedIndices) {
+//                 vulkan->resetIndexRange(indices, changedIndex, 6);
+//             }
+//             for (auto changedVertex : changedVertices) {
+//                 vulkan->resetVertexRange(vertices, changedVertex, 4);
+//             }
+//         } else {
+//             vulkan->resetIndexRange(indices, 0, indicesIndex);
+//             vulkan->resetVertexRange(vertices, 0, verticesIndex);
+//         }
+//     } else {
+//         vulkan->setVerticesAndIndices(vertices, indices);
+//     }
+//     running = true;
+//     changedVertices.clear();
+//     changedIndices.clear();
+// }
 
 void World::updateUBO(UniformBufferObject *ubo) {
-    for (int i = 0; i < entities.size(); i++) {
-        entities[i].updateUBO(ubo);
-    }
+    // for (int i = 0; i < entities.size(); i++) {
+    //     entities[i].updateUBO(ubo);
+    // }
 }

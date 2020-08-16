@@ -10,7 +10,7 @@ pkg_search_module(GLM REQUIRED glm)
 
 add_executable(5d
   client/App.cpp
-  client/Entity.cpp
+  client/GeometryChunk.cpp
   client/VulkanUtil.cpp
   client/WorldClient.cpp
   client/World.cpp

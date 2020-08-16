@@ -114,8 +114,8 @@ class VulkanUtil {
     void initSurface(VkSurfaceKHR surface);
 
     void resetVerticesAndIndices(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
-    void resetVertexRange(const std::vector<Vertex> &vertices, size_t start, size_t size);
-    void resetIndexRange(const std::vector<uint32_t> &indices, size_t start, size_t size);
+    void resetVertexRange(const std::vector<Vertex> &vertices, size_t start, size_t size, size_t arrStart = 0);
+    void resetIndexRange(const std::vector<uint32_t> &indices, size_t start, size_t size, size_t arrStart = 0);
 
     void setVerticesAndIndices(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 
@@ -249,9 +249,9 @@ class VulkanUtil {
 
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
-    void createVertexBuffer(const std::vector<Vertex> &vertices, bool update, size_t start, size_t size);
+    void createVertexBuffer(const std::vector<Vertex> &vertices, bool update, size_t start, size_t size, size_t arrStart);
 
-    void createIndexBuffer(const std::vector<uint32_t> &indices, bool update, size_t start, size_t size);
+    void createIndexBuffer(const std::vector<uint32_t> &indices, bool update, size_t start, size_t size, size_t arrStart);
 
     void createUniformBuffers();
 

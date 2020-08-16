@@ -6,6 +6,7 @@
 #include "../common/util.hpp"
 #include "../common/vec5.hpp"
 #include "../common/Chunk.hpp"
+#include "GeometryChunk.hpp"
 
 class WorldClient {
    public:
@@ -13,7 +14,7 @@ class WorldClient {
     void requestChunk(ChunkLoc loc);
     void pollEvents();
 
-    std::queue<std::pair<ChunkLoc, Chunk> > requestedChunks;
+    std::queue<std::pair<ChunkLoc, GeometryChunk> > requestedChunks;
 
    private:
     HSteamNetConnection connection;

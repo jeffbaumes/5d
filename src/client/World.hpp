@@ -9,7 +9,9 @@
 #include "VulkanUtil.hpp"
 #include "Entity.hpp"
 #include "../common/vec5.hpp"
+#include "GeometryChunk.hpp"
 
+const int CHUNK_BLOCK_SIZE = 4096;
 
 struct ChunkNotLoadedException : public std::exception
 {
@@ -49,6 +51,9 @@ class WorldClient;
 
 class World {
    public:
+    const std::vector<uint32_t> EMPTY_INDICES_CHUNK_BLOCK;
+    const std::vector<Vertex> EMPTY_VERTICES_CHUNK_BLOCK;
+
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
@@ -73,33 +78,31 @@ class World {
     Cell getCell(CellLoc loc);
     Cell getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc);
     void setCell(CellLoc loc, Cell cellData);
-    void setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData, bool sendVertices, int fillIndicesStart = 0, int fillVerticesStart = 0);
 
     ChunkLoc chunkLocForCell(CellLoc loc);
 
     void loadChunk(ChunkLoc loc);
     void unloadChunk(ChunkLoc loc);
-    void saveChunk(ChunkLoc loc);
-    void generateChunk(ChunkLoc loc);
+    // void saveChunk(ChunkLoc loc);
+    // void generateChunk(ChunkLoc loc);
 
-    void sendVerticesAndIndicesToVulkan();
+    void updateVulkan();
 
     void printStats();
 
     void updateUBO(UniformBufferObject *ubo);
 
-    void createSide(CellLoc loc, int side, Cell cellData = -1, int fillIndicesStart = 0, int fillVerticesStart = 0);
-    void removeSide(CellLoc loc, int side);
-
    private:
     VulkanUtil *vulkan;
     WorldClient *client = nullptr;
     bool running = false;
-    std::unordered_map<ChunkLoc, Chunk> chunks;
-    std::map<SideIndex, size_t> sideIndices;
-    std::map<SideIndex, size_t> sideVertices;
-    std::vector<size_t> emptySideIndices;
-    std::vector<size_t> emptySideVertices;
+    std::unordered_map<ChunkLoc, GeometryChunk> chunks;
+    std::unordered_map<ChunkLoc, std::vector<uint>> chunkIndicesIndices;
+    std::unordered_map<ChunkLoc, std::vector<uint>> chunkVerticesIndices;
+    std::map<SideIndex, size_t> chunkIndices;
+    std::map<SideIndex, size_t> chunkVertices;
+    std::vector<size_t> emptyChunkIndices;
+    std::vector<size_t> emptyChunkVertices;
     std::string dirname;
 
 

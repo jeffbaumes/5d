@@ -2,6 +2,7 @@
 
 #include "../common/vec5.hpp"
 #include "../common/Chunk.hpp"
+#include "GeometryChunk.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -71,10 +72,10 @@ void WorldClient::PollIncomingMessages() {
             loc.print();
 
             auto chunkData = reinterpret_cast<int *>(&msg[ind]);
-            Chunk chunk;
+            GeometryChunk chunk;
             std::copy(chunkData, chunkData + CHUNK_SIZE, chunk.cells.begin());
 
-            requestedChunks.push(std::pair<ChunkLoc, Chunk>(loc, chunk));
+            requestedChunks.push(std::pair<ChunkLoc, GeometryChunk>(loc, chunk));
         } else {
             std::cout.write(msg, len);
             std::cout << std::endl;
