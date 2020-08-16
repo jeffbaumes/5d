@@ -73,7 +73,7 @@ class World {
     Cell getCell(CellLoc loc);
     Cell getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc);
     void setCell(CellLoc loc, Cell cellData);
-    void setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData, bool sendVertices);
+    void setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData, bool sendVertices, int fillIndicesStart = 0, int fillVerticesStart = 0);
 
     ChunkLoc chunkLocForCell(CellLoc loc);
 
@@ -88,8 +88,7 @@ class World {
 
     void updateUBO(UniformBufferObject *ubo);
 
-
-    void createSide(CellLoc loc, int side, Cell cellData = -1);
+    void createSide(CellLoc loc, int side, Cell cellData = -1, int fillIndicesStart = 0, int fillVerticesStart = 0);
     void removeSide(CellLoc loc, int side);
 
    private:

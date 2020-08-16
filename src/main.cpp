@@ -22,6 +22,8 @@ int main(int argc, const char *argv[]) {
         App app;
         app.run();
         return 0;
+    } else if (argc == 2 && argv[1] == "--help") {
+        printUsageAndExit();
     }
     bool bServer = false;
     bool bClient = false;

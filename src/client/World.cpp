@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <chrono>
 
 #include "Entity.hpp"
 #include "WorldClient.hpp"
@@ -47,19 +48,34 @@ void World::pollEvents() {
             chunks[loc] = chunk;
             std::cout << "Adding chunk" << std::endl;
             loc.print();
+            sendVerticesAndIndicesToVulkan();
+            int startIndicesIndex = indicesIndex;
+            int startVerticesIndex = verticesIndex;
+            auto startTime = std::chrono::high_resolution_clock::now();
             for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
                 for (int y = 0; y < CHUNK_SIZE_Y; y++) {
                     for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
                         for (int u = 0; u < CHUNK_SIZE_XZUV; u++) {
                             for (int v = 0; v < CHUNK_SIZE_XZUV; v++) {
                                 RelativeCellLoc rel = {x, y, z, u, v};
-                                setCellInChunk(loc, rel, chunk[rel], false);
+                                setCellInChunk(loc, rel, chunk[rel], false, startIndicesIndex, startVerticesIndex);
                             }
                         }
                     }
                 }
             }
-            sendVerticesAndIndicesToVulkan();
+
+            auto endTime = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
+            auto startTime2 = std::chrono::high_resolution_clock::now();
+            std::cout << "T: " << indicesIndex - startIndicesIndex << std::endl
+                      << std::flush;
+            vulkan->resetIndexRange(indices, startIndicesIndex, indicesIndex - startIndicesIndex);
+            vulkan->resetVertexRange(vertices, startVerticesIndex, verticesIndex - startVerticesIndex);
+            auto endTime2 = std::chrono::high_resolution_clock::now();
+            auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(endTime2 - startTime2).count();
+            std::cout << duration << " " << duration2 << std::endl
+                      << std::flush;
         }
     }
 }
@@ -111,7 +127,7 @@ void World::setCell(CellLoc loc, Cell cellData) {
     setCellInChunk(chunkLoc, relCell, cellData, true);
 }
 
-void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData, bool sendVertices) {
+void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData, bool sendVertices, int fillIndicesStart, int fillVerticesStart) {
     auto result = chunks.find(chunkLoc);
 
     if (result == chunks.end()) {
@@ -154,40 +170,40 @@ void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData
             }
         }
         if (getCell({x - 1, y, z, u, v}) != 0) {
-            createSide({x - 1, y, z, u, v}, 1);
+            createSide({x - 1, y, z, u, v}, 1, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x, y, z, u - 1, v}) != 0) {
-            createSide({x, y, z, u - 1, v}, 1);
+            createSide({x, y, z, u - 1, v}, 1, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x + 1, y, z, u, v}) != 0) {
-            createSide({x + 1, y, z, u, v}, -1);
+            createSide({x + 1, y, z, u, v}, -1, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x, y, z, u + 1, v}) != 0) {
-            createSide({x, y, z, u + 1, v}, -1);
+            createSide({x, y, z, u + 1, v}, -1, fillIndicesStart, fillVerticesStart);
         }
 
         if (getCell({x, y - 1, z, u, v}) != 0) {
-            createSide({x, y - 1, z, u, v}, 2);
+            createSide({x, y - 1, z, u, v}, 2, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x, y + 1, z, u, v}) != 0) {
-            createSide({x, y + 1, z, u, v}, -2);
+            createSide({x, y + 1, z, u, v}, -2, fillIndicesStart, fillVerticesStart);
         }
 
         if (getCell({x, y, z - 1, u, v}) != 0) {
-            createSide({x, y, z - 1, u, v}, 3);
+            createSide({x, y, z - 1, u, v}, 3, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x, y, z, u, v - 1}) != 0) {
-            createSide({x, y, z, u, v - 1}, 3);
+            createSide({x, y, z, u, v - 1}, 3, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x, y, z + 1, u, v}) != 0) {
-            createSide({x, y, z + 1, u, v}, -3);
+            createSide({x, y, z + 1, u, v}, -3, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x, y, z, u, v + 1}) != 0) {
-            createSide({x, y, z, u, v + 1}, -3);
+            createSide({x, y, z, u, v + 1}, -3, fillIndicesStart, fillVerticesStart);
         }
     } else {
         if (getCell({x - 1, y, z, u, v}) == 0 || getCell({x, y, z, u - 1, v}) == 0) {
-            createSide({x, y, z, u, v}, -1);
+            createSide({x, y, z, u, v}, -1, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x - 1, y, z, u, v}) != 0 && getCell({x - 1, y, z, u + 1, v}) != 0) {
             removeSide({x - 1, y, z, u, v}, 1);
@@ -197,7 +213,7 @@ void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData
         }
 
         if (getCell({x + 1, y, z, u, v}) == 0 || getCell({x, y, z, u + 1, v}) == 0) {
-            createSide({x, y, z, u, v}, 1);
+            createSide({x, y, z, u, v}, 1, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x + 1, y, z, u, v}) != 0 && getCell({x + 1, y, z, u - 1, v}) != 0) {
             removeSide({x + 1, y, z, u, v}, -1);
@@ -207,19 +223,19 @@ void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData
         }
 
         if (getCell({x, y - 1, z, u, v}) == 0) {
-            createSide({x, y, z, u, v}, -2);
+            createSide({x, y, z, u, v}, -2, fillIndicesStart, fillVerticesStart);
         } else {
             removeSide({x, y - 1, z, u, v}, 2);
         }
 
         if (getCell({x, y + 1, z, u, v}) == 0) {
-            createSide({x, y, z, u, v}, 2);
+            createSide({x, y, z, u, v}, 2, fillIndicesStart, fillVerticesStart);
         } else {
             removeSide({x, y + 1, z, u, v}, -2);
         }
 
         if (getCell({x, y, z - 1, u, v}) == 0 || getCell({x, y, z, u, v - 1}) == 0) {
-            createSide({x, y, z, u, v}, -3);
+            createSide({x, y, z, u, v}, -3, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x, y, z - 1, u, v}) != 0 && getCell({x, y, z - 1, u, v + 1}) != 0) {
             removeSide({x, y, z - 1, u, v}, 3);
@@ -229,7 +245,7 @@ void World::setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData
         }
 
         if (getCell({x, y, z + 1, u, v}) == 0 || getCell({x, y, z, u, v + 1}) == 0) {
-            createSide({x, y, z, u, v}, 3);
+            createSide({x, y, z, u, v}, 3, fillIndicesStart, fillVerticesStart);
         }
         if (getCell({x, y, z + 1, u, v}) != 0 && getCell({x, y, z + 1, u, v - 1}) != 0) {
             removeSide({x, y, z + 1, u, v}, -3);
@@ -384,27 +400,41 @@ void World::init() {
 void World::destroy() {
 }
 
-void World::createSide(CellLoc loc, int side, Cell cellData) {
+void World::createSide(CellLoc loc, int side, Cell cellData, int fillIndicesStart, int fillVerticesStart) {
     SideIndex sideIndex = {loc.x, loc.y, loc.z, loc.u, loc.v, side};
 
     if (sideIndices.count(sideIndex)) {
         return;
     }
 
-    bool usingEmptyIndicesSlot = false;
+    int emptyIndicesSlotIndex = -1;
     size_t originalIndicesIndex = indicesIndex;
-    if (emptySideIndices.size() > 0) {
-        usingEmptyIndicesSlot = true;
-        indicesIndex = emptySideIndices.back();
-        emptySideIndices.pop_back();
-    }
-
-    bool usingEmptyVerticesSlot = false;
+    int emptyVerticesSlotIndex = -1;
     size_t originalVerticesIndex = verticesIndex;
+    if (emptySideIndices.size() > 0) {
+        int i;
+        for (i = emptySideIndices.size() - 1; emptySideIndices[i] < fillIndicesStart; i--) {}
+        indicesIndex = emptySideIndices[i];
+        emptyIndicesSlotIndex = i;
+        if (i == -1) {
+            indicesIndex = originalIndicesIndex;
+            emptyIndicesSlotIndex = i;
+        } else {
+            emptySideIndices.erase(emptySideIndices.begin() + i);
+        }
+    }
     if (emptySideVertices.size() > 0) {
-        usingEmptyVerticesSlot = true;
-        verticesIndex = emptySideVertices.back();
-        emptySideVertices.pop_back();
+        int i;
+        for (i = emptySideVertices.size() - 1; emptySideVertices[i] < fillVerticesStart; i--) {
+        }
+        verticesIndex = emptySideVertices[i];
+        emptyVerticesSlotIndex = i;
+        if (i == -1) {
+            verticesIndex = originalVerticesIndex;
+            emptyVerticesSlotIndex = i;
+        } else {
+            emptySideVertices.erase(emptySideVertices.begin() + i);
+        }
     }
 
     changedIndices.push_back(indicesIndex);
@@ -491,12 +521,12 @@ void World::createSide(CellLoc loc, int side, Cell cellData) {
         indices[indicesIndex + 5] = verticesIndex + 1;
     }
 
-    if (usingEmptyIndicesSlot) {
+    if (emptyIndicesSlotIndex != -1) {
         indicesIndex = originalIndicesIndex;
     } else {
         indicesIndex += 6;
     }
-    if (usingEmptyVerticesSlot) {
+    if (emptyVerticesSlotIndex != -1) {
         verticesIndex = originalVerticesIndex;
     } else {
         verticesIndex += 4;
@@ -534,7 +564,8 @@ void World::sendVerticesAndIndicesToVulkan() {
                 vulkan->resetVertexRange(vertices, changedVertex, 4);
             }
         } else {
-            vulkan->resetVerticesAndIndices(vertices, indices);
+            vulkan->resetIndexRange(indices, 0, indicesIndex);
+            vulkan->resetVertexRange(vertices, 0, verticesIndex);
         }
     } else {
         vulkan->setVerticesAndIndices(vertices, indices);
