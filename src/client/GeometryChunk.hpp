@@ -11,7 +11,6 @@ class GeometryChunk: public Chunk {
    public:
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-    ChunkLoc location;
     void setCell(RelativeCellLoc loc, Cell cellData);
     void generateGeometry();
 

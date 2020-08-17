@@ -19,6 +19,7 @@ class Chunk {
     std::vector<Cell> cells;
     Cell& operator[](const RelativeCellLoc loc);
     Cell getCell(const RelativeCellLoc loc);
+    ChunkLoc location;
 };
 
 #endif // CHUNK_HPP

@@ -74,6 +74,7 @@ void WorldClient::PollIncomingMessages() {
             auto chunkData = reinterpret_cast<int *>(&msg[ind]);
             GeometryChunk chunk;
             std::copy(chunkData, chunkData + CHUNK_SIZE, chunk.cells.begin());
+            chunk.location = loc;
 
             requestedChunks.push(std::pair<ChunkLoc, GeometryChunk>(loc, chunk));
         } else {

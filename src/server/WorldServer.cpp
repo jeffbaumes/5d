@@ -92,6 +92,7 @@ void WorldServer::generateChunk(ChunkLoc loc, Chunk &chunk) {
             }
         }
     }
+    chunk.location = loc;
 }
 
 void WorldServer::saveChunk(ChunkLoc loc, const Chunk &chunk) {

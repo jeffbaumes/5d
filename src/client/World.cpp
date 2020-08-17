@@ -45,10 +45,12 @@ void World::pollEvents() {
             client->requestedChunks.pop();
             auto loc = locChunk.first;
             auto chunk = locChunk.second;
-            chunk.generateGeometry();
-            chunks[loc] = chunk;
             std::cout << "Adding chunk" << std::endl;
             loc.print();
+            chunk.generateGeometry();
+            chunks[loc] = chunk;
+            // std::cerr << "ALL: " << chunk.indices.size() << std::endl;
+
             updateVulkan();
         }
     }
@@ -235,6 +237,7 @@ void World::unloadChunk(ChunkLoc loc) {
 }
 
 void World::updateVulkan() {
+    std::cout << "UPDATE" << std::endl;
     for (auto const &[loc, chunk] : chunks) {
         std::vector<uint> allocsIndices = chunkIndicesIndices[loc];
         while (chunk.indices.size() > allocsIndices.size() * CHUNK_BLOCK_SIZE) {
@@ -246,6 +249,8 @@ void World::updateVulkan() {
                 indicesIndex++;
             }
         }
+        // loc.print();
+        std::cerr << "ALL: " << allocsIndices.size() << " " << chunk.indices.size() << std::endl;
         for (int i = 0; i < allocsIndices.size(); i++) {
             uint allocIndex = allocsIndices[i];
             vulkan->resetIndexRange(chunk.indices, allocIndex * CHUNK_BLOCK_SIZE, CHUNK_BLOCK_SIZE, i * CHUNK_BLOCK_SIZE);
@@ -271,11 +276,13 @@ void World::updateVulkan() {
 World::World(VulkanUtil *_vulkan) {
     dirname = "world";
     vulkan = _vulkan;
+    // init();
 }
 
 World::World(VulkanUtil *_vulkan, WorldClient *_client) {
     vulkan = _vulkan;
     client = _client;
+    // init();
 }
 
 World::~World() {
@@ -288,9 +295,9 @@ World::~World() {
 // }
 
 void World::init() {
-    vertices.resize(100 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 4, {0, {0, 0, 0}, {0, 0}});
-    indices.resize(100 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 6, 0);
-    std::cerr << sizeof(vertices[0]) << std::endl;
+    vertices.resize(250 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 4, {0, {0, 0, 0}, {0, 0}});
+    indices.resize(250 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 6, 0);
+    std::cerr << "V: " << sizeof(vertices[0]) << std::endl;
 
     for (int x = 0; x < MAX_ENTITYS; x++) {
         unusedEntityIDS.push_back(x);

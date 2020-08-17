@@ -17,6 +17,7 @@ void GeometryChunk::generateGeometry() {
 
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
+    std::cout << "T: " << duration << std::endl;
 }
 
 void GeometryChunk::setCell(RelativeCellLoc loc, Cell cellData) {
@@ -152,7 +153,7 @@ void GeometryChunk::createSide(RelativeCellLoc cellLoc, int side, Cell cellData)
         indicesIndex = emptySideIndices.back();
         emptySideIndices.pop_back();
     } else {
-        indices.resize(indicesIndex + 6);
+        indices.resize(indicesIndex + 6, 0);
     }
     if (emptySideVertices.size() > 0) {
         usingEmptyVerticesSlot = true;
@@ -160,9 +161,11 @@ void GeometryChunk::createSide(RelativeCellLoc cellLoc, int side, Cell cellData)
         verticesIndex = emptySideVertices.back();
         emptySideVertices.pop_back();
     } else {
-        vertices.resize(verticesIndex + 4);
+        vertices.resize(verticesIndex + 4, {});
     }
 
+    // location.print();
+    // std::cout << "CREATE: " << indices.size() << "," << vertices.size() << std::endl;
 
     changedIndices.push_back(indicesIndex);
     changedVertices.push_back(verticesIndex);

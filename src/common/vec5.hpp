@@ -69,8 +69,12 @@ struct vector5 {
     bool operator==(const vector5<T> &other) const {
         return x == other.x && y == other.y && z == other.z && u == other.u && v == other.v;
     }
-    void print() {
+    void print() const {
         std::cerr << x << "," << y << "," << z << "," << u << "," << v << " " << std::endl;
+    }
+    std::ostream &operator<<(std::ostream &os) {
+        os << x << "," << y << "," << z << "," << u << "," << v;
+        return os;
     }
 };
 
