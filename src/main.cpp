@@ -22,7 +22,7 @@ int main(int argc, const char *argv[]) {
         App app;
         app.run();
         return 0;
-    } else if (argc == 2 && argv[1] == "--help") {
+    } else if (argc == 2 && strncmp(argv[1], "--help", 7)) {
         printUsageAndExit();
     }
     bool bServer = false;

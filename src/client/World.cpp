@@ -111,30 +111,31 @@ void World::loadChunk(ChunkLoc loc) {
         return;
     }
 
-    // Chunk chunk;
+    GeometryChunk chunk;
 
-    // std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
-    // std::ifstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
-    // file.read((char *) chunk.cells.data(), sizeof(int) * chunk.cells.size());
-    // chunks[loc] = chunk;
-    // if(!file.good()) {
-    //     generateChunk(loc);
-    //     return;
-    // }
-    // file.close();
+    std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
+    std::ifstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
+    file.read((char *) chunk.cells.data(), sizeof(int) * chunk.cells.size());
+    chunk.location = loc;
+    chunks[loc] = chunk;
+    if(!file.good()) {
+        chunks[loc] = generateChunk(loc);
+        return;
+    }
+    file.close();
 
-    // for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
-    //     for (int y = 0; y < CHUNK_SIZE_Y; y++) {
-    //         for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
-    //             for (int u = 0; u < CHUNK_SIZE_XZUV; u++) {
-    //                 for (int v = 0; v < CHUNK_SIZE_XZUV; v++) {
-    //                     RelativeCellLoc rel = {x, y, z, u, v};
-    //                     setCellInChunk(loc, rel, chunk[rel], false);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+    for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
+        for (int y = 0; y < CHUNK_SIZE_Y; y++) {
+            for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
+                for (int u = 0; u < CHUNK_SIZE_XZUV; u++) {
+                    for (int v = 0; v < CHUNK_SIZE_XZUV; v++) {
+                        RelativeCellLoc rel = {x, y, z, u, v};
+                        chunk.setCell(rel, chunk[rel]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 // void World::unloadChunk(ChunkLoc loc) {
@@ -173,33 +174,36 @@ void World::loadChunk(ChunkLoc loc) {
 //     file.close();
 // }
 
-// void World::generateChunk(ChunkLoc loc) {
-//     for (int x = 0; x < CHUNK_SIZE_XZUV; x += 1) {
-//         for (int y = 0; y < CHUNK_SIZE_Y; y += 1) {
-//             for (int z = 0; z < CHUNK_SIZE_XZUV; z += 1) {
-//                 for (int u = 0; u < CHUNK_SIZE_XZUV; u += 1) {
-//                     for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
-//                         // setCellInChunk(loc, {x, y, z, u, v}, rand() % 3, false);
-//                         // if (y < CHUNK_SIZE_Y / 2) {
-//                         int material = 0;
-//                         if (y == 3) {
-//                             material = 3;
-//                         }
-//                         if (y == 2) {
-//                             material = 2;
-//                         }
-//                         if (y == 1) {
-//                             material = 1;
-//                         }
-//                         if (material > 0) {
-//                             setCellInChunk(loc, {x, y, z, u, v}, material, false);
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
+GeometryChunk World::generateChunk(ChunkLoc loc) {
+    GeometryChunk chunk(*this);
+    chunk.location = loc;
+    for (int x = 0; x < CHUNK_SIZE_XZUV; x += 1) {
+        for (int y = 0; y < CHUNK_SIZE_Y; y += 1) {
+            for (int z = 0; z < CHUNK_SIZE_XZUV; z += 1) {
+                for (int u = 0; u < CHUNK_SIZE_XZUV; u += 1) {
+                    for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
+                        // setCellInChunk(loc, {x, y, z, u, v}, rand() % 3, false);
+                        // if (y < CHUNK_SIZE_Y / 2) {
+                        int material = 0;
+                        if (y == 3) {
+                            material = 3;
+                        }
+                        if (y == 2) {
+                            material = 2;
+                        }
+                        if (y == 1) {
+                            material = 1;
+                        }
+                        if (material > 0) {
+                            chunk.setCell({x, y, z, u, v}, material);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return chunk;
+}
 
 void World::printStats() {
     std::cout << "Number of chunks: " << chunks.size() << std::endl;
@@ -239,35 +243,18 @@ void World::unloadChunk(ChunkLoc loc) {
 void World::updateVulkan() {
     std::cout << "UPDATE" << std::endl;
     for (auto const &[loc, chunk] : chunks) {
-        std::vector<uint> allocsIndices = chunkIndicesIndices[loc];
-        while (chunk.indices.size() > allocsIndices.size() * CHUNK_BLOCK_SIZE) {
-            if (emptyChunkIndices.size() > 0) {
-                allocsIndices.push_back(emptyChunkIndices.back());
-                emptyChunkIndices.pop_back();
-            } else {
-                allocsIndices.push_back(indicesIndex);
-                indicesIndex++;
-            }
-        }
-        // loc.print();
-        std::cerr << "ALL: " << allocsIndices.size() << " " << chunk.indices.size() << std::endl;
-        for (int i = 0; i < allocsIndices.size(); i++) {
-            uint allocIndex = allocsIndices[i];
-            vulkan->resetIndexRange(chunk.indices, allocIndex * CHUNK_BLOCK_SIZE, CHUNK_BLOCK_SIZE, i * CHUNK_BLOCK_SIZE);
-        }
-
-        std::vector<uint> allocsVertices = chunkVerticesIndices[loc];
-        while (chunk.vertices.size() > allocsVertices.size() * CHUNK_BLOCK_SIZE) {
+        while (chunk.vertices.size() > chunkVerticesIndices[loc].size() * CHUNK_BLOCK_SIZE) {
+            std::cout << "Adding allocation" << std::endl;
             if (emptyChunkVertices.size() > 0) {
-                allocsVertices.push_back(emptyChunkVertices.back());
+                chunkVerticesIndices[loc].push_back(emptyChunkVertices.back());
                 emptyChunkVertices.pop_back();
             } else {
-                allocsVertices.push_back(verticesIndex);
+                chunkVerticesIndices[loc].push_back(verticesIndex);
                 verticesIndex++;
             }
         }
-        for (int i = 0; i < allocsVertices.size(); i++) {
-            uint allocIndex = allocsVertices[i];
+        for (int i = 0; i < chunkVerticesIndices[loc].size(); i++) {
+            uint allocIndex = chunkVerticesIndices[loc][i];
             vulkan->resetVertexRange(chunk.vertices, allocIndex * CHUNK_BLOCK_SIZE, CHUNK_BLOCK_SIZE, i * CHUNK_BLOCK_SIZE);
         }
     }
@@ -297,9 +284,18 @@ World::~World() {
 void World::init() {
     vertices.resize(250 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 4, {0, {0, 0, 0}, {0, 0}});
     indices.resize(250 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 6, 0);
+    for (size_t i = 0; i < indices.size(); i += 6) {
+        size_t v = i / 6 * 4;
+        indices[i + 0] = v + 0;
+        indices[i + 1] = v + 1;
+        indices[i + 2] = v + 2;
+        indices[i + 3] = v + 0;
+        indices[i + 4] = v + 3;
+        indices[i + 5] = v + 1;
+    }
     std::cerr << "V: " << sizeof(vertices[0]) << std::endl;
 
-    for (int x = 0; x < MAX_ENTITYS; x++) {
+    for (int x = 0; x < MAX_ENTITIES; x++) {
         unusedEntityIDS.push_back(x);
     }
     vulkan->setVerticesAndIndices(vertices, indices);

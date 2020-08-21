@@ -60,6 +60,7 @@ void App::initWorld() {
         }
     }
     world->printStats();
+    world->updateVulkan();
     // world->sendVerticesAndIndicesToVulkan();
 }
 

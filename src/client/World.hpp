@@ -83,8 +83,8 @@ class World {
 
     void loadChunk(ChunkLoc loc);
     void unloadChunk(ChunkLoc loc);
-    // void saveChunk(ChunkLoc loc);
-    // void generateChunk(ChunkLoc loc);
+    void saveChunk(ChunkLoc loc);
+    GeometryChunk generateChunk(ChunkLoc loc);
 
     void updateVulkan();
 

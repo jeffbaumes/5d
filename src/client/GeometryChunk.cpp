@@ -21,13 +21,11 @@ void GeometryChunk::generateGeometry() {
 }
 
 void GeometryChunk::setCell(RelativeCellLoc loc, Cell cellData) {
-    CellLoc globalCellLoc = getCellLocFrom(loc, location);
-
-    int x = globalCellLoc.x;
-    int y = globalCellLoc.y;
-    int z = globalCellLoc.z;
-    int u = globalCellLoc.u;
-    int v = globalCellLoc.v;
+    int x = loc.x;
+    int y = loc.y;
+    int z = loc.z;
+    int u = loc.u;
+    int v = loc.v;
 
     (*this)[loc] = cellData;
 
@@ -137,40 +135,24 @@ CellLoc GeometryChunk::getCellLocFrom(RelativeCellLoc relCellLoc, ChunkLoc chunk
 void GeometryChunk::createSide(RelativeCellLoc cellLoc, int side, Cell cellData) {
     SideIndex sideIndex = {cellLoc.x, cellLoc.y, cellLoc.z, cellLoc.u, cellLoc.v, side};
 
-    if (sideIndices.count(sideIndex)) {
+    if (sideVertices.count(sideIndex)) {
         return;
     }
 
     size_t verticesIndex = vertices.size();
-    size_t indicesIndex = indices.size();
 
-    bool usingEmptyIndicesSlot = false;
-    size_t originalIndicesIndex = indicesIndex;
     bool usingEmptyVerticesSlot = false;
     size_t originalVerticesIndex = verticesIndex;
-    if (emptySideIndices.size() > 0) {
-        usingEmptyIndicesSlot = true;
-        indicesIndex = emptySideIndices.back();
-        emptySideIndices.pop_back();
-    } else {
-        indices.resize(indicesIndex + 6, 0);
-    }
     if (emptySideVertices.size() > 0) {
         usingEmptyVerticesSlot = true;
-
         verticesIndex = emptySideVertices.back();
         emptySideVertices.pop_back();
     } else {
         vertices.resize(verticesIndex + 4, {});
     }
 
-    // location.print();
-    // std::cout << "CREATE: " << indices.size() << "," << vertices.size() << std::endl;
-
-    changedIndices.push_back(indicesIndex);
     changedVertices.push_back(verticesIndex);
 
-    sideIndices[sideIndex] = indicesIndex;
     sideVertices[sideIndex] = verticesIndex;
 
     Cell mat = getCell(cellLoc);
@@ -190,74 +172,33 @@ void GeometryChunk::createSide(RelativeCellLoc cellLoc, int side, Cell cellData)
         vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
         vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
         vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b010), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 3;
-        indices[indicesIndex + 5] = verticesIndex + 1;
     } else if (side == 3) {
         vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 2;
-        indices[indicesIndex + 5] = verticesIndex + 3;
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
     } else if (side == -1) {
         vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b000), xyz, uv};
         vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
         vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b010), xyz, uv};
         vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 3;
-        indices[indicesIndex + 5] = verticesIndex + 1;
     } else if (side == 1) {
         vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 2;
-        indices[indicesIndex + 5] = verticesIndex + 3;
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
     } else if (side == -2) {
         vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b000), xyz, uv};
-        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
-        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
-        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 2;
-        indices[indicesIndex + 5] = verticesIndex + 3;
+        vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b101), xyz, uv};
+        vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b001), xyz, uv};
+        vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b100), xyz, uv};
     } else if (side == 2) {
         vertices[verticesIndex + 0] = {static_cast<uint16_t>(sp + 0b010), xyz, uv};
         vertices[verticesIndex + 1] = {static_cast<uint16_t>(sp + 0b111), xyz, uv};
         vertices[verticesIndex + 2] = {static_cast<uint16_t>(sp + 0b110), xyz, uv};
         vertices[verticesIndex + 3] = {static_cast<uint16_t>(sp + 0b011), xyz, uv};
-        indices[indicesIndex + 0] = verticesIndex + 0;
-        indices[indicesIndex + 1] = verticesIndex + 1;
-        indices[indicesIndex + 2] = verticesIndex + 2;
-        indices[indicesIndex + 3] = verticesIndex + 0;
-        indices[indicesIndex + 4] = verticesIndex + 3;
-        indices[indicesIndex + 5] = verticesIndex + 1;
     }
 
-    if (usingEmptyIndicesSlot) {
-        indicesIndex = originalIndicesIndex;
-    } else {
-        indicesIndex += 6;
-    }
     if (usingEmptyVerticesSlot) {
         verticesIndex = originalVerticesIndex;
     } else {
@@ -267,18 +208,10 @@ void GeometryChunk::createSide(RelativeCellLoc cellLoc, int side, Cell cellData)
 
 void GeometryChunk::removeSide(RelativeCellLoc loc, int side) {
     SideIndex sideIndex = {loc.x, loc.y, loc.z, loc.u, loc.v, side};
-    if (sideIndices.count(sideIndex) && sideVertices.count(sideIndex)) {
-        size_t index = sideIndices[sideIndex];
-        for (size_t i = index; i < index + 6; i += 1) {
-            indices[i] = 0;
-        }
-        sideIndices.erase(sideIndex);
-        emptySideIndices.push_back(index);
-        changedIndices.push_back(index);
-
-        index = sideVertices[sideIndex];
+    if (sideVertices.count(sideIndex)) {
+        auto index = sideVertices[sideIndex];
         for (size_t i = index; i < index + 4; i += 1) {
-            vertices[i] = {};
+            vertices[i] = {0, {0, 0, 0}, {0, 0}};
         }
         sideVertices.erase(sideIndex);
         emptySideVertices.push_back(index);
