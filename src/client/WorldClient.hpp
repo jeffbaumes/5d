@@ -3,21 +3,24 @@
 
 #include <queue>
 
-#include "util.hpp"
-#include "vec5.hpp"
-#include "Chunk.hpp"
+#include "../common/util.hpp"
+#include "../common/vec5.hpp"
+#include "../common/Chunk.hpp"
+#include "GeometryChunk.hpp"
 
 class WorldClient {
    public:
+    WorldClient(World &w);
     void Run(const SteamNetworkingIPAddr &serverAddr);
     void requestChunk(ChunkLoc loc);
     void pollEvents();
 
-    std::queue<std::pair<ChunkLoc, Chunk> > requestedChunks;
+    std::queue<std::pair<ChunkLoc, GeometryChunk> > requestedChunks;
 
    private:
     HSteamNetConnection connection;
     ISteamNetworkingSockets *interface;
+    World &world;
     bool quit = false;
 
     void PollIncomingMessages();

@@ -1,13 +1,17 @@
 #include "WorldClient.hpp"
 
-#include "vec5.hpp"
-#include "Chunk.hpp"
+#include "../common/vec5.hpp"
+#include "../common/Chunk.hpp"
+#include "GeometryChunk.hpp"
+#include "World.hpp"
 
 #include <algorithm>
 #include <sstream>
 #include <thread>
 
 WorldClient *WorldClient::callbackInstance;
+
+WorldClient::WorldClient(World &w) : world(w) { }
 
 void WorldClient::Run(const SteamNetworkingIPAddr &serverAddr) {
     // Select instance to use.  For now we'll always use the default.
@@ -58,12 +62,9 @@ void WorldClient::PollIncomingMessages() {
         auto msg = static_cast<char *>(incomingMsg->m_pData);
         auto len = incomingMsg->m_cbSize;
 
-        Printf("Got something back of size %d", len);
-
         size_t ind = 0;
         if (msg[ind] == 0) {
             ind += 1;
-            Printf("Got a chunk");
 
             auto locPtr = reinterpret_cast<int *>(&msg[ind]);
             ind += sizeof(ChunkLoc);
@@ -71,10 +72,12 @@ void WorldClient::PollIncomingMessages() {
             loc.print();
 
             auto chunkData = reinterpret_cast<int *>(&msg[ind]);
-            Chunk chunk;
+            GeometryChunk chunk(world);
             std::copy(chunkData, chunkData + CHUNK_SIZE, chunk.cells.begin());
+            chunk.location = loc;
+            auto chunk2 = chunk;
 
-            requestedChunks.push(std::pair<ChunkLoc, Chunk>(loc, chunk));
+            requestedChunks.push(std::pair<ChunkLoc, GeometryChunk>(loc, chunk));
         } else {
             std::cout.write(msg, len);
             std::cout << std::endl;

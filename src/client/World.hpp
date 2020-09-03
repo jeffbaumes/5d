@@ -3,13 +3,15 @@
 
 #include <vector>
 #include <map>
-#include <sqlite3.h>
 
-#include "Chunk.hpp"
+#include "../common/Chunk.hpp"
 #include "VulkanUtil.hpp"
 #include "Entity.hpp"
-#include "vec5.hpp"
+#include "../common/vec5.hpp"
+#include "GeometryChunk.hpp"
+#include "../common/WorldGenerator.hpp"
 
+const int CHUNK_BLOCK_SIZE = 4096;
 
 struct ChunkNotLoadedException : public std::exception
 {
@@ -49,21 +51,18 @@ class WorldClient;
 
 class World {
    public:
+    const std::vector<uint32_t> EMPTY_INDICES_CHUNK_BLOCK;
+    const std::vector<Vertex> EMPTY_VERTICES_CHUNK_BLOCK;
+
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-
-    int indicesIndex = 0;
-    int verticesIndex = 0;
-
-    std::vector<size_t> changedIndices;
-    std::vector<size_t> changedVertices;
+    size_t verticesIndex = 0;
 
     std::vector<Entity> entities;
     std::vector<int> unusedEntityIDS;
 
     World(VulkanUtil *vulkan);
     World(VulkanUtil *vulkan, WorldClient *client);
-    // World(VulkanUtil *vulkan, std::string dirname);
     ~World();
 
     void init();
@@ -73,37 +72,30 @@ class World {
     Cell getCell(CellLoc loc);
     Cell getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc);
     void setCell(CellLoc loc, Cell cellData);
-    void setCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc, Cell cellData, bool sendVertices);
+    void createSide(const CellLoc &loc, int side, Cell cellData);
+    void removeSide(const CellLoc &loc, int side);
 
     ChunkLoc chunkLocForCell(CellLoc loc);
+    RelativeCellLoc relativeLocForCell(CellLoc loc);
 
     void loadChunk(ChunkLoc loc);
     void unloadChunk(ChunkLoc loc);
     void saveChunk(ChunkLoc loc);
-    void generateChunk(ChunkLoc loc);
-
-    void sendVerticesAndIndicesToVulkan();
-
+    void updateVulkan();
     void printStats();
-
     void updateUBO(UniformBufferObject *ubo);
 
-
-    void createSide(CellLoc loc, int side, Cell cellData = -1);
-    void removeSide(CellLoc loc, int side);
+    WorldClient *client = nullptr;
+    WorldGenerator *generator = nullptr;
 
    private:
     VulkanUtil *vulkan;
-    WorldClient *client = nullptr;
     bool running = false;
-    std::unordered_map<ChunkLoc, Chunk> chunks;
-    std::map<SideIndex, size_t> sideIndices;
-    std::map<SideIndex, size_t> sideVertices;
-    std::vector<size_t> emptySideIndices;
-    std::vector<size_t> emptySideVertices;
+    std::unordered_map<ChunkLoc, GeometryChunk> chunks;
+    std::unordered_map<ChunkLoc, std::vector<uint>> chunkVerticesIndices;
+    std::map<SideIndex, size_t> chunkVertices;
+    std::vector<size_t> emptyChunkVertices;
     std::string dirname;
-
-
 
     void destroy();
 

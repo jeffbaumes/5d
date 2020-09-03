@@ -1,6 +1,7 @@
-#include "App.hpp"
-#include "WorldClient.hpp"
-#include "WorldServer.hpp"
+#include "client/App.hpp"
+#include "client/WorldClient.hpp"
+#include "server/WorldServer.hpp"
+#include "common/FlatWorldGenerator.hpp"
 
 #include <thread>
 
@@ -20,8 +21,12 @@ void printUsageAndExit(int rc = 1) {
 int main(int argc, const char *argv[]) {
     if (argc == 1) {
         App app;
+        FlatWorldGenerator gen;
+        app.world->generator = &gen;
         app.run();
         return 0;
+    } else if (argc == 2 && strncmp(argv[1], "--help", 7)) {
+        printUsageAndExit();
     }
     bool bServer = false;
     bool bClient = false;
@@ -73,15 +78,15 @@ int main(int argc, const char *argv[]) {
     InitSteamDatagramConnectionSockets();
 
     if (bClient) {
-        WorldClient client;
+        App app;
+        WorldClient client(*app.world);
+        app.world->client = &client;
         client.Run(addrServer);
-        // std::thread *mainThread = new std::thread([client, addrServer]() mutable {
-        //     client.Run(addrServer);
-        // });
-        App app(&client);
         app.run();
     } else {
         WorldServer server;
+        FlatWorldGenerator gen;
+        server.generator = &gen;
         server.Run((uint16)nPort);
     }
 

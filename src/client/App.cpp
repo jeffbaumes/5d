@@ -1,6 +1,6 @@
 #include "App.hpp"
 
-#include "Entity.hpp"
+// #include "Entity.hpp"
 #include "WorldClient.hpp"
 
 App::App() {
@@ -45,9 +45,9 @@ void App::initVulkan() {
 void App::initWorld() {
     world->init();
     // world->loadChunk({0, 0, 0, 0, 0});
-    auto entity = Entity(world, 3);
-    entity.init();
-    world->entities.push_back(entity);
+    // auto entity = Entity(world, 3);
+    // entity.init();
+    // world->entities.push_back(entity);
     int size = 1;
     for (int x = -size; x <= size; x += 1) {
         for (int z = -size; z <= size; z += 1) {
@@ -60,7 +60,8 @@ void App::initWorld() {
         }
     }
     world->printStats();
-    world->sendVerticesAndIndicesToVulkan();
+    world->updateVulkan();
+    // world->sendVerticesAndIndicesToVulkan();
 }
 
 void App::framebufferResizeCallback(GLFWwindow *window, int width, int height) {
@@ -77,16 +78,16 @@ void App::mouseButtonCallback(GLFWwindow *window, int button, int action, int mo
             app->firstMousePosition = true;
         } else {
             app->world->setCell(app->focusedCell, 0);
-            app->world->sendVerticesAndIndicesToVulkan();
-            app->world->saveChunk(app->world->chunkLocForCell(app->focusedCell));
+            // app->world->sendVerticesAndIndicesToVulkan();
+            // app->world->saveChunk(app->world->chunkLocForCell(app->focusedCell));
         }
     }
 
     if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
         if (app->cursorLocked) {
             app->world->setCell(app->buildCell, app->buildMat);
-            app->world->sendVerticesAndIndicesToVulkan();
-            app->world->saveChunk(app->world->chunkLocForCell(app->buildCell));
+            // app->world->sendVerticesAndIndicesToVulkan();
+            // app->world->saveChunk(app->world->chunkLocForCell(app->buildCell));
         }
     }
 }
@@ -346,8 +347,8 @@ void App::updateUniforms() {
 
     // world->entities[0].location = {glm::sin(time) * 2 + 2, 2, glm::sin(time) * 2 + 2, 0, 0};
     // world->entities[0].location = {glm::sin(time), 2, 2, floor(uv.x), floor(uv.y)};
-    world->entities[0].location = {2 + glm::sin(time), 2, 2, 2, 2};
-    world->entities[0].rotation = glm::vec3(glm::sin(time), glm::sin(time), 0);
+    // world->entities[0].location = {2 + glm::sin(time), 2, 2, 2, 2};
+    // world->entities[0].rotation = glm::vec3(glm::sin(time), glm::sin(time), 0);
     // std::cout << world->entities[0].location.u << "," << world->entities[0].location.v << "," << world->entities[0].location.x << "," << std::endl;
     // std::cout << loc.x << "," << loc.y << "," << loc.z << "," << uv.x << "," << uv.y << std::endl;
 

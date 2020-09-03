@@ -69,8 +69,12 @@ struct vector5 {
     bool operator==(const vector5<T> &other) const {
         return x == other.x && y == other.y && z == other.z && u == other.u && v == other.v;
     }
-    void print() {
+    void print() const {
         std::cerr << x << "," << y << "," << z << "," << u << "," << v << " " << std::endl;
+    }
+    std::ostream &operator<<(std::ostream &os) {
+        os << x << "," << y << "," << z << "," << u << "," << v;
+        return os;
     }
 };
 
@@ -91,9 +95,5 @@ glm::vec3 project(glm::vec3 a, glm::vec3 b);
 
 // ProjectToPlane projects a vector onto a plane with a given normal
 glm::vec3 projectToPlane(glm::vec3 v, glm::vec3 n);
-
-typedef ivec5 CellLoc;
-typedef ivec5 ChunkLoc;
-typedef ivec5 RelativeCellLoc;
 
 #endif // VEC5_HPP

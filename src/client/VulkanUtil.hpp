@@ -28,9 +28,9 @@
 #include <vector>
 
 const std::string MODEL_PATH = "src/assets/models/viking_room.obj";
-const std::string TEXTURE_PATH = "src/assets/textures/merged.png";
-const std::string VERTEX_SHADER_PATH = "src/shaders/vert.spv";
-const std::string FRAG_SHADER_PATH = "src/shaders/frag.spv";
+const std::string TEXTURE_PATH = "src/client/textures/merged.png";
+const std::string VERTEX_SHADER_PATH = "src/client/shaders/vert.spv";
+const std::string FRAG_SHADER_PATH = "src/client/shaders/frag.spv";
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -87,7 +87,7 @@ struct hash<Vertex> {
 };
 }
 
-const int MAX_ENTITYS = 10;
+const int MAX_ENTITIES = 10;
 
 struct UniformBufferObject {
     alignas(16) glm::mat4 model;
@@ -98,9 +98,9 @@ struct UniformBufferObject {
     alignas(8) glm::vec2 uv;
     alignas(8) glm::vec2 selectedCellUV;
     alignas(4) float uvView;
-    alignas(16) glm::vec4 entityLocationUV[MAX_ENTITYS];
-    alignas(16) glm::vec4 entityRotation[MAX_ENTITYS];
-    alignas(16) glm::vec4 entityLocationXYZ[MAX_ENTITYS];
+    alignas(16) glm::vec4 entityLocationUV[MAX_ENTITIES];
+    alignas(16) glm::vec4 entityRotation[MAX_ENTITIES];
+    alignas(16) glm::vec4 entityLocationXYZ[MAX_ENTITIES];
 };
 
 class VulkanUtil {
@@ -114,8 +114,8 @@ class VulkanUtil {
     void initSurface(VkSurfaceKHR surface);
 
     void resetVerticesAndIndices(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
-    void resetVertexRange(const std::vector<Vertex> &vertices, size_t start, size_t size);
-    void resetIndexRange(const std::vector<uint32_t> &indices, size_t start, size_t size);
+    void resetVertexRange(const std::vector<Vertex> &vertices, size_t start, size_t size, size_t arrStart = 0);
+    void resetIndexRange(const std::vector<uint32_t> &indices, size_t start, size_t size, size_t arrStart = 0);
 
     void setVerticesAndIndices(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices);
 
@@ -249,9 +249,9 @@ class VulkanUtil {
 
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
-    void createVertexBuffer(const std::vector<Vertex> &vertices, bool update, size_t start, size_t size);
+    void createVertexBuffer(const std::vector<Vertex> &vertices, bool update, size_t start, size_t size, size_t arrStart);
 
-    void createIndexBuffer(const std::vector<uint32_t> &indices, bool update, size_t start, size_t size);
+    void createIndexBuffer(const std::vector<uint32_t> &indices, bool update, size_t start, size_t size, size_t arrStart);
 
     void createUniformBuffers();
 

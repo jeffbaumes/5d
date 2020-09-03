@@ -160,8 +160,8 @@ void VulkanUtil::initSurface(VkSurfaceKHR surface) {
 }
 
 void VulkanUtil::setVerticesAndIndices(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices) {
-    createVertexBuffer(vertices, false, 0, 0);
-    createIndexBuffer(indices, false, 0, 0);
+    createVertexBuffer(vertices, false, 0, 0, 0);
+    createIndexBuffer(indices, false, 0, 0, 0);
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
@@ -170,16 +170,16 @@ void VulkanUtil::setVerticesAndIndices(const std::vector<Vertex> &vertices, cons
 }
 
 void VulkanUtil::resetVerticesAndIndices(const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices) {
-    createVertexBuffer(vertices, true, 0, 0);
-    createIndexBuffer(indices, true, 0, 0);
+    createVertexBuffer(vertices, true, 0, 0, 0);
+    createIndexBuffer(indices, true, 0, 0, 0);
 }
 
-void VulkanUtil::resetVertexRange(const std::vector<Vertex> &vertices, size_t start, size_t size) {
-    createVertexBuffer(vertices, true, start, size);
+void VulkanUtil::resetVertexRange(const std::vector<Vertex> &vertices, size_t start, size_t size, size_t arrStart) {
+    createVertexBuffer(vertices, true, start, size, arrStart);
 }
 
-void VulkanUtil::resetIndexRange(const std::vector<uint32_t> &indices, size_t start, size_t size) {
-    createIndexBuffer(indices, true, start, size);
+void VulkanUtil::resetIndexRange(const std::vector<uint32_t> &indices, size_t start, size_t size, size_t arrStart) {
+    createIndexBuffer(indices, true, start, size, arrStart);
 }
 
 void VulkanUtil::cleanupSwapChain() {
@@ -1022,10 +1022,14 @@ void VulkanUtil::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t widt
     endSingleTimeCommands(commandBuffer);
 }
 
-void VulkanUtil::createVertexBuffer(const std::vector<Vertex> &vertices, bool update, size_t start, size_t size) {
+void VulkanUtil::createVertexBuffer(const std::vector<Vertex> &vertices, bool update, size_t start, size_t size, size_t arrStart) {
     if (size == 0) {
         size = vertices.size();
     }
+
+    // Make sure we don't go off the end of the vector
+    size = std::min(size, vertices.size() - arrStart);
+
     VkDeviceSize bufferSize = sizeof(vertices[0]) * size;
     VkDeviceSize bufferOffset = sizeof(vertices[0]) * start;
 
@@ -1035,7 +1039,7 @@ void VulkanUtil::createVertexBuffer(const std::vector<Vertex> &vertices, bool up
 
     void *data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data() + start, (size_t)bufferSize);
+    memcpy(data, vertices.data() + arrStart, static_cast<size_t>(bufferSize));
     vkUnmapMemory(device, stagingBufferMemory);
 
     if (!update) {
@@ -1048,7 +1052,7 @@ void VulkanUtil::createVertexBuffer(const std::vector<Vertex> &vertices, bool up
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void VulkanUtil::createIndexBuffer(const std::vector<uint32_t> &indices, bool update, size_t start, size_t size) {
+void VulkanUtil::createIndexBuffer(const std::vector<uint32_t> &indices, bool update, size_t start, size_t size, size_t arrStart) {
     indexCount = indices.size();
     if (size == 0) {
         size = indices.size();
@@ -1062,7 +1066,7 @@ void VulkanUtil::createIndexBuffer(const std::vector<uint32_t> &indices, bool up
 
     void *data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data() + start, (size_t)bufferSize);
+    memcpy(data, indices.data() + arrStart, (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
     if (!update) {

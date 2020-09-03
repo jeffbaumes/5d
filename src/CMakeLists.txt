@@ -1,24 +1,25 @@
 
 set(VULKAN_SDK_PATH "" CACHE PATH "Vulkan SDK path (include up to vulkan/[architecture])")
 
-add_subdirectory(shaders)
-add_subdirectory(assets/textures)
+add_subdirectory(client/shaders)
+add_subdirectory(client/textures)
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLFW REQUIRED glfw3)
 pkg_search_module(GLM REQUIRED glm)
 
 add_executable(5d
-  App.cpp
-  Chunk.cpp
-  Entity.cpp
-  VulkanUtil.cpp
-  World.cpp
-  WorldClient.cpp
-  WorldServer.cpp
+  client/App.cpp
+  client/GeometryChunk.cpp
+  client/VulkanUtil.cpp
+  client/WorldClient.cpp
+  client/World.cpp
+  server/WorldServer.cpp
+  common/vec5.cpp
+  common/Chunk.cpp
+  common/util.cpp
+  common/FlatWorldGenerator.cpp
   main.cpp
-  util.cpp
-  vec5.cpp
 )
 
 add_dependencies(5d spv texture)

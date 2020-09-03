@@ -27,6 +27,12 @@ ccmake ..    # Press 'c', set VULKAN_SDK_PATH appropriately, then press 'g' to g
 make -j4     # Or run whatever other build system you set up
 ```
 
+On Mac if you get a CMake error: `Could NOT find OpenSSL`, you can try something like the following (fill in your own homebrew path for your openssl version):
+
+``
+ccmake .. -DOPENSSL_ROOT_DIR=/usr/local/Cellar/openssl\@1.1/1.1.1g
+``
+
 To run, first set your Vulkan path:
 ```
 export VULKAN_SDK_PATH=Your Vulkan SDK path (include up to vulkan/[architecture])

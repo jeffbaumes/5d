@@ -5,8 +5,9 @@
 #include <sstream>
 #include <thread>
 
-#include "Chunk.hpp"
-#include "vec5.hpp"
+#include "../common/Chunk.hpp"
+#include "../common/vec5.hpp"
+#include "../common/WorldGenerator.hpp"
 
 WorldServer *WorldServer::callbackInstance;
 
@@ -68,44 +69,23 @@ void WorldServer::SendStringToAllClients(const char *str, HSteamNetConnection ex
     }
 }
 
-void WorldServer::generateChunk(ChunkLoc loc, Chunk &chunk) {
-    for (int x = 0; x < CHUNK_SIZE_XZUV; x += 1) {
-        for (int y = 0; y < CHUNK_SIZE_Y; y += 1) {
-            for (int z = 0; z < CHUNK_SIZE_XZUV; z += 1) {
-                for (int u = 0; u < CHUNK_SIZE_XZUV; u += 1) {
-                    for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
-                        int material = 0;
-                        if (y == 3) {
-                            material = 3;
-                        }
-                        if (y == 2) {
-                            material = 2;
-                        }
-                        if (y == 1) {
-                            material = 1;
-                        }
-                        if (material > 0) {
-                            chunk[{x, y, z, u, v}] = material;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 void WorldServer::saveChunk(ChunkLoc loc, const Chunk &chunk) {
     Printf("Saving a chunk (not really)");
 }
 
 void WorldServer::sendChunk(ChunkLoc loc, HSteamNetConnection connection) {
     Chunk chunk;
+    chunk.location = loc;
     std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
     std::ifstream file(worldDir + "/" + filename, std::ios::out | std::ios::binary);
     file.read(reinterpret_cast<char *>(chunk.cells.data()), sizeof(int) * CHUNK_SIZE);
     if (!file.good()) {
-        generateChunk(loc, chunk);
-        saveChunk(loc, chunk);
+        if (!generator) {
+            Printf("Error: No generator");
+        } else {
+            generator->fillChunk(chunk);
+            saveChunk(loc, chunk);
+        }
     }
 
     // Send the chunk
