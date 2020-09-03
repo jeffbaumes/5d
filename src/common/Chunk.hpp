@@ -15,8 +15,7 @@ const int CHUNK_SIZE = CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHU
 
 class Chunk {
    public:
-    Chunk(World &w);
-    World &world;
+    Chunk();
     std::vector<Cell> cells;
     Cell& operator[](const RelativeCellLoc &loc);
     Cell getCell(const RelativeCellLoc &loc);

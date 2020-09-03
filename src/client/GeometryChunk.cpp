@@ -1,7 +1,9 @@
 #include "GeometryChunk.hpp"
+#include "World.hpp"
+
+GeometryChunk::GeometryChunk(World &w) : world(w) { }
 
 void GeometryChunk::generateGeometry() {
-    auto startTime = std::chrono::high_resolution_clock::now();
     for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
         for (int y = 0; y < CHUNK_SIZE_Y; y++) {
             for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
@@ -14,13 +16,14 @@ void GeometryChunk::generateGeometry() {
             }
         }
     }
-
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
-    std::cout << "T: " << duration << std::endl;
 }
 
-void GeometryChunk::setCell(RelativeCellLoc loc, Cell cellData) {
+Cell GeometryChunk::getWorldCell(const RelativeCellLoc &loc) {
+    CellLoc worldLoc = getCellLocFrom(loc, location);
+    return world.getCell(worldLoc);
+}
+
+void GeometryChunk::setCell(const RelativeCellLoc &loc, Cell cellData) {
     int x = loc.x;
     int y = loc.y;
     int z = loc.z;
@@ -32,97 +35,97 @@ void GeometryChunk::setCell(RelativeCellLoc loc, Cell cellData) {
     if (cellData == 0) {
         for (int side = -3; side <= 3; side += 1) {
             if (side != 0) {
-                removeSide({x, y, z, u, v}, side);
+                removeWorldSide({x, y, z, u, v}, side);
             }
         }
-        if (getCell({x - 1, y, z, u, v}) != 0) {
-            createSide({x - 1, y, z, u, v}, 1);
+        if (getWorldCell({x - 1, y, z, u, v}) != 0) {
+            createWorldSide({x - 1, y, z, u, v}, 1);
         }
-        if (getCell({x, y, z, u - 1, v}) != 0) {
-            createSide({x, y, z, u - 1, v}, 1);
+        if (getWorldCell({x, y, z, u - 1, v}) != 0) {
+            createWorldSide({x, y, z, u - 1, v}, 1);
         }
-        if (getCell({x + 1, y, z, u, v}) != 0) {
-            createSide({x + 1, y, z, u, v}, -1);
+        if (getWorldCell({x + 1, y, z, u, v}) != 0) {
+            createWorldSide({x + 1, y, z, u, v}, -1);
         }
-        if (getCell({x, y, z, u + 1, v}) != 0) {
-            createSide({x, y, z, u + 1, v}, -1);
-        }
-
-        if (getCell({x, y - 1, z, u, v}) != 0) {
-            createSide({x, y - 1, z, u, v}, 2);
-        }
-        if (getCell({x, y + 1, z, u, v}) != 0) {
-            createSide({x, y + 1, z, u, v}, -2);
+        if (getWorldCell({x, y, z, u + 1, v}) != 0) {
+            createWorldSide({x, y, z, u + 1, v}, -1);
         }
 
-        if (getCell({x, y, z - 1, u, v}) != 0) {
-            createSide({x, y, z - 1, u, v}, 3);
+        if (getWorldCell({x, y - 1, z, u, v}) != 0) {
+            createWorldSide({x, y - 1, z, u, v}, 2);
         }
-        if (getCell({x, y, z, u, v - 1}) != 0) {
-            createSide({x, y, z, u, v - 1}, 3);
+        if (getWorldCell({x, y + 1, z, u, v}) != 0) {
+            createWorldSide({x, y + 1, z, u, v}, -2);
         }
-        if (getCell({x, y, z + 1, u, v}) != 0) {
-            createSide({x, y, z + 1, u, v}, -3);
+
+        if (getWorldCell({x, y, z - 1, u, v}) != 0) {
+            createWorldSide({x, y, z - 1, u, v}, 3);
         }
-        if (getCell({x, y, z, u, v + 1}) != 0) {
-            createSide({x, y, z, u, v + 1}, -3);
+        if (getWorldCell({x, y, z, u, v - 1}) != 0) {
+            createWorldSide({x, y, z, u, v - 1}, 3);
+        }
+        if (getWorldCell({x, y, z + 1, u, v}) != 0) {
+            createWorldSide({x, y, z + 1, u, v}, -3);
+        }
+        if (getWorldCell({x, y, z, u, v + 1}) != 0) {
+            createWorldSide({x, y, z, u, v + 1}, -3);
         }
     } else {
-        if (getCell({x - 1, y, z, u, v}) == 0 || getCell({x, y, z, u - 1, v}) == 0) {
-            createSide({x, y, z, u, v}, -1);
+        if (getWorldCell({x - 1, y, z, u, v}) == 0 || getWorldCell({x, y, z, u - 1, v}) == 0) {
+            createWorldSide({x, y, z, u, v}, -1);
         }
-        if (getCell({x - 1, y, z, u, v}) != 0 && getCell({x - 1, y, z, u + 1, v}) != 0) {
-            removeSide({x - 1, y, z, u, v}, 1);
+        if (getWorldCell({x - 1, y, z, u, v}) != 0 && getWorldCell({x - 1, y, z, u + 1, v}) != 0) {
+            removeWorldSide({x - 1, y, z, u, v}, 1);
         }
-        if (getCell({x, y, z, u - 1, v}) != 0 && getCell({x + 1, y, z, u - 1, v}) != 0) {
-            removeSide({x, y, z, u - 1, v}, 1);
-        }
-
-        if (getCell({x + 1, y, z, u, v}) == 0 || getCell({x, y, z, u + 1, v}) == 0) {
-            createSide({x, y, z, u, v}, 1);
-        }
-        if (getCell({x + 1, y, z, u, v}) != 0 && getCell({x + 1, y, z, u - 1, v}) != 0) {
-            removeSide({x + 1, y, z, u, v}, -1);
-        }
-        if (getCell({x, y, z, u + 1, v}) != 0 && getCell({x - 1, y, z, u + 1, v}) != 0) {
-            removeSide({x, y, z, u + 1, v}, -1);
+        if (getWorldCell({x, y, z, u - 1, v}) != 0 && getWorldCell({x + 1, y, z, u - 1, v}) != 0) {
+            removeWorldSide({x, y, z, u - 1, v}, 1);
         }
 
-        if (getCell({x, y - 1, z, u, v}) == 0) {
-            createSide({x, y, z, u, v}, -2);
+        if (getWorldCell({x + 1, y, z, u, v}) == 0 || getWorldCell({x, y, z, u + 1, v}) == 0) {
+            createWorldSide({x, y, z, u, v}, 1);
+        }
+        if (getWorldCell({x + 1, y, z, u, v}) != 0 && getWorldCell({x + 1, y, z, u - 1, v}) != 0) {
+            removeWorldSide({x + 1, y, z, u, v}, -1);
+        }
+        if (getWorldCell({x, y, z, u + 1, v}) != 0 && getWorldCell({x - 1, y, z, u + 1, v}) != 0) {
+            removeWorldSide({x, y, z, u + 1, v}, -1);
+        }
+
+        if (getWorldCell({x, y - 1, z, u, v}) == 0) {
+            createWorldSide({x, y, z, u, v}, -2);
         } else {
-            removeSide({x, y - 1, z, u, v}, 2);
+            removeWorldSide({x, y - 1, z, u, v}, 2);
         }
 
-        if (getCell({x, y + 1, z, u, v}) == 0) {
-            createSide({x, y, z, u, v}, 2);
+        if (getWorldCell({x, y + 1, z, u, v}) == 0) {
+            createWorldSide({x, y, z, u, v}, 2);
         } else {
-            removeSide({x, y + 1, z, u, v}, -2);
+            removeWorldSide({x, y + 1, z, u, v}, -2);
         }
 
-        if (getCell({x, y, z - 1, u, v}) == 0 || getCell({x, y, z, u, v - 1}) == 0) {
-            createSide({x, y, z, u, v}, -3);
+        if (getWorldCell({x, y, z - 1, u, v}) == 0 || getWorldCell({x, y, z, u, v - 1}) == 0) {
+            createWorldSide({x, y, z, u, v}, -3);
         }
-        if (getCell({x, y, z - 1, u, v}) != 0 && getCell({x, y, z - 1, u, v + 1}) != 0) {
-            removeSide({x, y, z - 1, u, v}, 3);
+        if (getWorldCell({x, y, z - 1, u, v}) != 0 && getWorldCell({x, y, z - 1, u, v + 1}) != 0) {
+            removeWorldSide({x, y, z - 1, u, v}, 3);
         }
-        if (getCell({x, y, z, u, v - 1}) != 0 && getCell({x, y, z + 1, u, v - 1}) != 0) {
-            removeSide({x, y, z, u, v - 1}, 3);
+        if (getWorldCell({x, y, z, u, v - 1}) != 0 && getWorldCell({x, y, z + 1, u, v - 1}) != 0) {
+            removeWorldSide({x, y, z, u, v - 1}, 3);
         }
 
-        if (getCell({x, y, z + 1, u, v}) == 0 || getCell({x, y, z, u, v + 1}) == 0) {
-            createSide({x, y, z, u, v}, 3);
+        if (getWorldCell({x, y, z + 1, u, v}) == 0 || getWorldCell({x, y, z, u, v + 1}) == 0) {
+            createWorldSide({x, y, z, u, v}, 3);
         }
-        if (getCell({x, y, z + 1, u, v}) != 0 && getCell({x, y, z + 1, u, v - 1}) != 0) {
-            removeSide({x, y, z + 1, u, v}, -3);
+        if (getWorldCell({x, y, z + 1, u, v}) != 0 && getWorldCell({x, y, z + 1, u, v - 1}) != 0) {
+            removeWorldSide({x, y, z + 1, u, v}, -3);
         }
-        if (getCell({x, y, z, u, v + 1}) != 0 && getCell({x, y, z - 1, u, v + 1}) != 0) {
-            removeSide({x, y, z, u, v + 1}, -3);
+        if (getWorldCell({x, y, z, u, v + 1}) != 0 && getWorldCell({x, y, z - 1, u, v + 1}) != 0) {
+            removeWorldSide({x, y, z, u, v + 1}, -3);
         }
     }
 }
 
-CellLoc GeometryChunk::getCellLocFrom(RelativeCellLoc relCellLoc, ChunkLoc chunkLoc) {
+CellLoc GeometryChunk::getCellLocFrom(const RelativeCellLoc &relCellLoc, ChunkLoc chunkLoc) {
     return {
         chunkLoc.x *CHUNK_SIZE_XZUV + relCellLoc.x,
         chunkLoc.y *CHUNK_SIZE_Y + relCellLoc.y,
@@ -132,7 +135,17 @@ CellLoc GeometryChunk::getCellLocFrom(RelativeCellLoc relCellLoc, ChunkLoc chunk
     };
 }
 
-void GeometryChunk::createSide(RelativeCellLoc cellLoc, int side, Cell cellData) {
+void GeometryChunk::createWorldSide(const RelativeCellLoc &loc, int side, Cell cellData) {
+    CellLoc worldLoc = getCellLocFrom(loc, location);
+    world.createSide(worldLoc, side, cellData);
+}
+
+void GeometryChunk::removeWorldSide(const RelativeCellLoc &loc, int side) {
+    CellLoc worldLoc = getCellLocFrom(loc, location);
+    world.removeSide(worldLoc, side);
+}
+
+void GeometryChunk::createSide(const RelativeCellLoc &cellLoc, int side, Cell cellData) {
     SideIndex sideIndex = {cellLoc.x, cellLoc.y, cellLoc.z, cellLoc.u, cellLoc.v, side};
 
     if (sideVertices.count(sideIndex)) {
@@ -155,7 +168,7 @@ void GeometryChunk::createSide(RelativeCellLoc cellLoc, int side, Cell cellData)
 
     sideVertices[sideIndex] = verticesIndex;
 
-    Cell mat = getCell(cellLoc);
+    Cell mat = getWorldCell(cellLoc);
     if (cellData != -1) {
         mat = cellData;
     };
@@ -206,7 +219,7 @@ void GeometryChunk::createSide(RelativeCellLoc cellLoc, int side, Cell cellData)
     }
 }
 
-void GeometryChunk::removeSide(RelativeCellLoc loc, int side) {
+void GeometryChunk::removeSide(const RelativeCellLoc &loc, int side) {
     SideIndex sideIndex = {loc.x, loc.y, loc.z, loc.u, loc.v, side};
     if (sideVertices.count(sideIndex)) {
         auto index = sideVertices[sideIndex];

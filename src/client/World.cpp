@@ -45,15 +45,22 @@ void World::pollEvents() {
             client->requestedChunks.pop();
             auto loc = locChunk.first;
             auto chunk = locChunk.second;
-            std::cout << "Adding chunk" << std::endl;
             loc.print();
-            chunk.generateGeometry();
-            chunks[loc] = chunk;
-            // std::cerr << "ALL: " << chunk.indices.size() << std::endl;
-
+            chunks.insert(std::pair<ChunkLoc, GeometryChunk>(loc, chunk));
+            chunks.find(loc)->second.generateGeometry();
             updateVulkan();
         }
     }
+}
+
+RelativeCellLoc World::relativeLocForCell(CellLoc loc) {
+    RelativeCellLoc relLoc;
+    relLoc.x = mod_floor(loc.x, CHUNK_SIZE_XZUV);
+    relLoc.y = mod_floor(loc.y, CHUNK_SIZE_Y);
+    relLoc.z = mod_floor(loc.z, CHUNK_SIZE_XZUV);
+    relLoc.u = mod_floor(loc.u, CHUNK_SIZE_XZUV);
+    relLoc.v = mod_floor(loc.v, CHUNK_SIZE_XZUV);
+    return relLoc;
 }
 
 ChunkLoc World::chunkLocForCell(CellLoc loc) {
@@ -69,15 +76,28 @@ ChunkLoc World::chunkLocForCell(CellLoc loc) {
 
 Cell World::getCell(CellLoc loc) {
     ChunkLoc chunkLoc = chunkLocForCell(loc);
-
-    RelativeCellLoc relCell;
-    relCell.x = mod_floor(loc.x, CHUNK_SIZE_XZUV);
-    relCell.y = mod_floor(loc.y, CHUNK_SIZE_Y);
-    relCell.z = mod_floor(loc.z, CHUNK_SIZE_XZUV);
-    relCell.u = mod_floor(loc.u, CHUNK_SIZE_XZUV);
-    relCell.v = mod_floor(loc.v, CHUNK_SIZE_XZUV);
-
+    RelativeCellLoc relCell = relativeLocForCell(loc);
     return getCellInChunk(chunkLoc, relCell);
+}
+
+void World::createSide(const CellLoc &loc, int side, Cell cellData) {
+    ChunkLoc chunkLoc = chunkLocForCell(loc);
+    RelativeCellLoc relLoc = relativeLocForCell(loc);
+    auto result = chunks.find(chunkLoc);
+    if (result == chunks.end()) {
+        return;
+    }
+    (*result).second.createSide(relLoc, side, cellData);
+}
+
+void World::removeSide(const CellLoc &loc, int side) {
+    ChunkLoc chunkLoc = chunkLocForCell(loc);
+    RelativeCellLoc relLoc = relativeLocForCell(loc);
+    auto result = chunks.find(chunkLoc);
+    if (result == chunks.end()) {
+        return;
+    }
+    (*result).second.removeSide(relLoc, side);
 }
 
 Cell World::getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc relLoc) {
@@ -100,7 +120,10 @@ void World::setCell(CellLoc loc, Cell cellData) {
     relCell.u = mod_floor(loc.u, CHUNK_SIZE_XZUV);
     relCell.v = mod_floor(loc.v, CHUNK_SIZE_XZUV);
 
-    chunks[chunkLoc].setCell(relCell, cellData);
+    auto chunkIt = chunks.find(chunkLoc);
+    if (chunkIt != chunks.end()) {
+        chunkIt->second.setCell(relCell, cellData);
+    }
 
     updateVulkan();
 }
@@ -111,31 +134,18 @@ void World::loadChunk(ChunkLoc loc) {
         return;
     }
 
-    GeometryChunk chunk;
+    GeometryChunk chunk(*this);
+    chunk.location = loc;
 
     std::string filename = std::to_string(loc.x) + "_" + std::to_string(loc.y) + "_" + std::to_string(loc.z) + "_" + std::to_string(loc.u) + "_" + std::to_string(loc.v);
     std::ifstream file(dirname + "/" + filename, std::ios::out | std::ios::binary);
     file.read((char *) chunk.cells.data(), sizeof(int) * chunk.cells.size());
-    chunk.location = loc;
-    chunks[loc] = chunk;
-    if(!file.good()) {
-        chunks[loc] = generateChunk(loc);
-        return;
+    if (!file.good()) {
+        generator->fillChunk(chunk);
     }
+    chunks.insert(std::pair<ChunkLoc, GeometryChunk>(loc, chunk));
+    chunks.find(loc)->second.generateGeometry();
     file.close();
-
-    for (int x = 0; x < CHUNK_SIZE_XZUV; x++) {
-        for (int y = 0; y < CHUNK_SIZE_Y; y++) {
-            for (int z = 0; z < CHUNK_SIZE_XZUV; z++) {
-                for (int u = 0; u < CHUNK_SIZE_XZUV; u++) {
-                    for (int v = 0; v < CHUNK_SIZE_XZUV; v++) {
-                        RelativeCellLoc rel = {x, y, z, u, v};
-                        chunk.setCell(rel, chunk[rel]);
-                    }
-                }
-            }
-        }
-    }
 }
 
 // void World::unloadChunk(ChunkLoc loc) {
@@ -174,77 +184,27 @@ void World::loadChunk(ChunkLoc loc) {
 //     file.close();
 // }
 
-GeometryChunk World::generateChunk(ChunkLoc loc) {
-    GeometryChunk chunk(*this);
-    chunk.location = loc;
-    for (int x = 0; x < CHUNK_SIZE_XZUV; x += 1) {
-        for (int y = 0; y < CHUNK_SIZE_Y; y += 1) {
-            for (int z = 0; z < CHUNK_SIZE_XZUV; z += 1) {
-                for (int u = 0; u < CHUNK_SIZE_XZUV; u += 1) {
-                    for (int v = 0; v < CHUNK_SIZE_XZUV; v += 1) {
-                        // setCellInChunk(loc, {x, y, z, u, v}, rand() % 3, false);
-                        // if (y < CHUNK_SIZE_Y / 2) {
-                        int material = 0;
-                        if (y == 3) {
-                            material = 3;
-                        }
-                        if (y == 2) {
-                            material = 2;
-                        }
-                        if (y == 1) {
-                            material = 1;
-                        }
-                        if (material > 0) {
-                            chunk.setCell({x, y, z, u, v}, material);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return chunk;
-}
-
 void World::printStats() {
     std::cout << "Number of chunks: " << chunks.size() << std::endl;
-    std::cout << "Number of indices: " << indicesIndex << std::endl;
-    std::cout << "Number of vertices: " << verticesIndex << std::endl;
-    if (chunks.size() > 0) {
-        std::cout << "Indices per chunk: " << indicesIndex / chunks.size() << std::endl;
-        std::cout << "Vertices per chunk: " << verticesIndex / chunks.size() << std::endl;
-    }
     std::cout << "Indices capacity: " << indices.size() << std::endl;
     std::cout << "Vertices capacity: " << vertices.size() << std::endl;
-    std::cout << "Empty chunk indices slots: " << emptyChunkIndices.size() << std::endl;
     std::cout << "Empty chunk vertices slots: " << emptyChunkVertices.size() << std::endl;
 }
 
 void World::unloadChunk(ChunkLoc loc) {
     chunks.erase(loc);
-    std::vector<uint> allocsIndices = chunkIndicesIndices[loc];
-    for (int i = 0; i < allocsIndices.size(); i++) {
-        uint allocIndex = allocsIndices[i];
-        emptyChunkIndices.push_back(allocIndex);
-        vulkan->resetIndexRange(EMPTY_INDICES_CHUNK_BLOCK, allocIndex * CHUNK_BLOCK_SIZE, CHUNK_BLOCK_SIZE, i * CHUNK_BLOCK_SIZE);
-    }
-    chunkIndicesIndices.erase(loc);
-
-
     std::vector<uint> allocsVertices = chunkVerticesIndices[loc];
     for (int i = 0; i < allocsVertices.size(); i++) {
         uint allocIndex = allocsVertices[i];
         emptyChunkVertices.push_back(allocIndex);
         vulkan->resetVertexRange(EMPTY_VERTICES_CHUNK_BLOCK, allocIndex * CHUNK_BLOCK_SIZE, CHUNK_BLOCK_SIZE, i * CHUNK_BLOCK_SIZE);
     }
-
     chunkVerticesIndices.erase(loc);
 }
 
 void World::updateVulkan() {
-    std::cout << "UPDATE" << std::endl;
     for (auto const &[loc, chunk] : chunks) {
         while (chunk.vertices.size() > chunkVerticesIndices[loc].size() * CHUNK_BLOCK_SIZE) {
-            std::cout << "Adding allocation" << std::endl;
             if (emptyChunkVertices.size() > 0) {
                 chunkVerticesIndices[loc].push_back(emptyChunkVertices.back());
                 emptyChunkVertices.pop_back();
@@ -276,11 +236,6 @@ World::~World() {
     destroy();
 }
 
-// World::World(VulkanUtil *vulkan, std::string dirname) {
-//     this->dirname = dirname;
-//     this->vulkan = vulkan;
-// }
-
 void World::init() {
     vertices.resize(250 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 4, {0, {0, 0, 0}, {0, 0}});
     indices.resize(250 * CHUNK_SIZE_XZUV * CHUNK_SIZE_Y * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * CHUNK_SIZE_XZUV * 6 * 6, 0);
@@ -293,13 +248,11 @@ void World::init() {
         indices[i + 4] = v + 3;
         indices[i + 5] = v + 1;
     }
-    std::cerr << "V: " << sizeof(vertices[0]) << std::endl;
 
     for (int x = 0; x < MAX_ENTITIES; x++) {
         unusedEntityIDS.push_back(x);
     }
     vulkan->setVerticesAndIndices(vertices, indices);
-    verticesIndex++;
 }
 
 void World::destroy() {

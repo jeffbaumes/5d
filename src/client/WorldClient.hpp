@@ -10,6 +10,7 @@
 
 class WorldClient {
    public:
+    WorldClient(World &w);
     void Run(const SteamNetworkingIPAddr &serverAddr);
     void requestChunk(ChunkLoc loc);
     void pollEvents();
@@ -19,6 +20,7 @@ class WorldClient {
    private:
     HSteamNetConnection connection;
     ISteamNetworkingSockets *interface;
+    World &world;
     bool quit = false;
 
     void PollIncomingMessages();

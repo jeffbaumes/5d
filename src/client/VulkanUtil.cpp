@@ -1026,6 +1026,10 @@ void VulkanUtil::createVertexBuffer(const std::vector<Vertex> &vertices, bool up
     if (size == 0) {
         size = vertices.size();
     }
+
+    // Make sure we don't go off the end of the vector
+    size = std::min(size, vertices.size() - arrStart);
+
     VkDeviceSize bufferSize = sizeof(vertices[0]) * size;
     VkDeviceSize bufferOffset = sizeof(vertices[0]) * start;
 
@@ -1035,7 +1039,7 @@ void VulkanUtil::createVertexBuffer(const std::vector<Vertex> &vertices, bool up
 
     void *data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data() + arrStart, (size_t)bufferSize);
+    memcpy(data, vertices.data() + arrStart, static_cast<size_t>(bufferSize));
     vkUnmapMemory(device, stagingBufferMemory);
 
     if (!update) {

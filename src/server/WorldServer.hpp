@@ -8,9 +8,12 @@
 #include "../common/util.hpp"
 #include "../common/vec5.hpp"
 
+class WorldGenerator;
+
 class WorldServer {
    public:
     void Run(uint16 nPort);
+    WorldGenerator *generator = nullptr;
 
    private:
     HSteamListenSocket listenSock;

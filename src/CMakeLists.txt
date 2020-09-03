@@ -18,6 +18,7 @@ add_executable(5d
   common/vec5.cpp
   common/Chunk.cpp
   common/util.cpp
+  common/FlatWorldGenerator.cpp
   main.cpp
 )
 

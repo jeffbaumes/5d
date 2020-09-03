@@ -29,10 +29,11 @@ class App {
 
     void run();
 
+    World *world;
+
    private:
     GLFWwindow *window;
     VulkanUtil vulkan;
-    World *world;
     std::vector<int> cells;
     std::map<SideIndex, size_t> sideIndices;
 

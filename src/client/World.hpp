@@ -3,13 +3,13 @@
 
 #include <vector>
 #include <map>
-// #include <sqlite3.h>
 
 #include "../common/Chunk.hpp"
 #include "VulkanUtil.hpp"
 #include "Entity.hpp"
 #include "../common/vec5.hpp"
 #include "GeometryChunk.hpp"
+#include "../common/WorldGenerator.hpp"
 
 const int CHUNK_BLOCK_SIZE = 4096;
 
@@ -56,19 +56,13 @@ class World {
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-
-    int indicesIndex = 0;
-    int verticesIndex = 0;
-
-    std::vector<size_t> changedIndices;
-    std::vector<size_t> changedVertices;
+    size_t verticesIndex = 0;
 
     std::vector<Entity> entities;
     std::vector<int> unusedEntityIDS;
 
     World(VulkanUtil *vulkan);
     World(VulkanUtil *vulkan, WorldClient *client);
-    // World(VulkanUtil *vulkan, std::string dirname);
     ~World();
 
     void init();
@@ -78,34 +72,30 @@ class World {
     Cell getCell(CellLoc loc);
     Cell getCellInChunk(ChunkLoc chunkLoc, RelativeCellLoc loc);
     void setCell(CellLoc loc, Cell cellData);
+    void createSide(const CellLoc &loc, int side, Cell cellData);
+    void removeSide(const CellLoc &loc, int side);
 
     ChunkLoc chunkLocForCell(CellLoc loc);
+    RelativeCellLoc relativeLocForCell(CellLoc loc);
 
     void loadChunk(ChunkLoc loc);
     void unloadChunk(ChunkLoc loc);
     void saveChunk(ChunkLoc loc);
-    GeometryChunk generateChunk(ChunkLoc loc);
-
     void updateVulkan();
-
     void printStats();
-
     void updateUBO(UniformBufferObject *ubo);
+
+    WorldClient *client = nullptr;
+    WorldGenerator *generator = nullptr;
 
    private:
     VulkanUtil *vulkan;
-    WorldClient *client = nullptr;
     bool running = false;
     std::unordered_map<ChunkLoc, GeometryChunk> chunks;
-    std::unordered_map<ChunkLoc, std::vector<uint>> chunkIndicesIndices;
     std::unordered_map<ChunkLoc, std::vector<uint>> chunkVerticesIndices;
-    std::map<SideIndex, size_t> chunkIndices;
     std::map<SideIndex, size_t> chunkVertices;
-    std::vector<size_t> emptyChunkIndices;
     std::vector<size_t> emptyChunkVertices;
     std::string dirname;
-
-
 
     void destroy();
 
