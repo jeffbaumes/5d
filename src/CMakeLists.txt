@@ -44,3 +44,8 @@ target_link_libraries(5d
   ${GLFW_STATIC_LIBRARIES}
   vulkan
 )
+
+add_subdirectory(engine)
+
+add_executable(5d-client client_main.cpp)
+target_link_libraries(5d-client 5DCore)

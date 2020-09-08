@@ -68,3 +68,8 @@ to
 
 Until someone finishes [clang-format dangling parentheses](https://reviews.llvm.org/D33029)
 we will stick with long lines.
+
+## Coding notes
+
+Added default virtual destructors to interface classes because I was running into the problem
+described [here](https://wiki.sei.cmu.edu/confluence/display/cplusplus/OOP52-CPP.+Do+not+delete+a+polymorphic+object+without+a+virtual+destructor).
