@@ -48,4 +48,21 @@ target_link_libraries(5d
 add_subdirectory(engine)
 
 add_executable(5d-client client_main.cpp)
-target_link_libraries(5d-client 5DCore)
+
+target_include_directories(5d-client
+  PUBLIC
+  ${GLFW_STATIC_INCLUDE_DIRS}
+)
+
+target_link_directories(5d-client
+  PUBLIC
+  ${GLFW_STATIC_LIBRARY_DIRS}
+)
+
+target_link_libraries(5d-client
+  5DCore
+  5DRender
+  ${GLFW_STATIC_LIBRARIES}
+  vulkan
+)
+

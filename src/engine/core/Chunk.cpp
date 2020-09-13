@@ -50,6 +50,17 @@ ChunkIndex Chunk::chunkIndexForCellLoc(CellLoc loc) {
     };
 }
 
+CellLoc Chunk::cellLocForRelativeCellLoc(RelativeCellLoc loc, ChunkIndex index) {
+    return {
+        index.x * size.x + loc.x,
+        index.y * size.y + loc.y,
+        index.z * size.z + loc.z,
+        index.u * size.u + loc.u,
+        index.v * size.v + loc.v,
+    };
+}
+
+
 void Chunk::allocateCells() {
     cells.resize(size.x * size.y * size.z * size.u * size.v, 0);
 }

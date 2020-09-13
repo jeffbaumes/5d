@@ -7,7 +7,8 @@
 
 #include "types.hpp"
 
-class Chunk;
+#include "Chunk.hpp"
+
 class ChunkRequestHandler;
 class Entity;
 class WorldListener;
@@ -30,7 +31,10 @@ public:
     void addWorldTask(std::shared_ptr<WorldTask> task);
     void setChunkRequestHandler(std::shared_ptr<ChunkRequestHandler> handler);
 
-    virtual void run();
+    void run();
+    void stop();
+
+    static CellLoc cellLocForWorldPos(WorldPos pos);
 
 private:
     std::unordered_map<ChunkIndex, std::unique_ptr<Chunk> > chunks = {};
@@ -38,5 +42,5 @@ private:
     std::vector<std::shared_ptr<WorldListener> > listeners = {};
     std::vector<std::shared_ptr<WorldTask> > tasks = {};
     std::shared_ptr<ChunkRequestHandler> chunkRequestHandler = {};
-    bool stop = false;
+    bool stopped = false;
 };

@@ -39,15 +39,16 @@ void World::requestChunk(ChunkIndex chunkInd) {
 }
 
 void World::addChunk(std::unique_ptr<Chunk> chunk) {
-    chunks[chunk->index] = std::move(chunk);
+    auto chunkIndex = chunk->index;
+    chunks[chunkIndex] = std::move(chunk);
     for (auto listener: listeners) {
-        listener->addChunk(*chunk);
+        listener->addChunk(*this, *chunks[chunkIndex]);
     }
 }
 
 void World::removeChunk(ChunkIndex chunkInd) {
     for (auto listener: listeners) {
-        listener->removeChunk(chunkInd);
+        listener->removeChunk(*this, chunkInd);
     }
     chunks.erase(chunkInd);
 }
@@ -78,7 +79,7 @@ void World::setChunkRequestHandler(std::shared_ptr<ChunkRequestHandler> handler)
 }
 
 void World::run() {
-    while (!stop) {
+    while (!stopped) {
         while (chunkRequestHandler->hasChunk()) {
             auto chunk = chunkRequestHandler->retrieveChunk();
             addChunk(std::move(chunk));
@@ -87,4 +88,18 @@ void World::run() {
             task->executeTask(*this, 0.05f);
         }
     }
+}
+
+void World::stop() {
+    stopped = true;
+}
+
+CellLoc World::cellLocForWorldPos(WorldPos pos) {
+    return CellLoc {
+        static_cast<int>(pos.x),
+        static_cast<int>(pos.y),
+        static_cast<int>(pos.z),
+        static_cast<int>(pos.u),
+        static_cast<int>(pos.v),
+   };
 }
