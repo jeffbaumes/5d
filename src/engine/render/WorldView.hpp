@@ -30,7 +30,7 @@ struct UnfinishedVertex {
     glm::i16vec2 uv;
     uint16_t sp;
 
-    Vertex toVertex(int spRest);
+    Vertex toVertex(int side, int corner);
 };
 
 struct SideIndex {
@@ -84,15 +84,16 @@ public:
     void setCameraViewAngle(float viewAngle);
     void setCameraUVView(float uvView);
 private:
-    void createSide(CellLoc loc, int side, Cell cell);
-    void createPosXUSide(CellLoc loc, Cell cellData);
-    void createPosZVSide(CellLoc loc, Cell cellData);
-    void createPosYSide(CellLoc loc, Cell cellData);
-    void createNegXUSide(CellLoc loc, Cell cellData);
-    void createNegZVSide(CellLoc loc, Cell cellData);
-    void createNegYSide(CellLoc loc, Cell cellData);
-    UnfinishedVertex getUnfinishedVertexForSide(SideIndex sideIndex, Cell cellData);
-    int getVertexLocationForSideAndAllocateRoomInVertices(CellLoc cellLoc);
+    void createSide(CellLoc & const loc, Cell & const cell, int side);
+    void createPosXUSide(CellLoc &const loc, Cell &const cell);
+    void createPosZVSide(CellLoc &const loc, Cell &const cell);
+    void createPosYSide(CellLoc &const loc, Cell &const cell);
+    void createNegXUSide(CellLoc &const loc, Cell &const cell);
+    void createNegZVSide(CellLoc &const loc, Cell &const cell);
+    void createNegYSide(CellLoc &const loc, Cell &const cell);
+    int sideSetup(std::shared_ptr<GeometryChunk> &const chunk, CellLoc &const loc, Cell &const cell);
+    UnfinishedVertex getUnfinishedVertex(CellLoc &const loc, Cell &const cell);
+    // int getVertexLocationForSideAndAllocateRoomInVertices(CellLoc cellLoc);
     // void addSideVertices(std::vector<int> order, uint16_t packedInfo, glm::vec3 xyz, glm::vec2 uv);
 
     void removeSide(CellLoc loc, int side);

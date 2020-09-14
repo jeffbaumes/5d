@@ -184,100 +184,124 @@ void WorldView::setCameraViewAngle(float viewAngle) {
 
 }
 
-// void WorldView::addSideVertices(std::vector<int> order, uint16_t packedInfo, glm::vec3 xyz, glm::vec2 uv) {
-//     vertices[verticesIndex + 0] = {static_cast<uint16_t>(packedInfo + 0b000), xyz, uv};
-//     vertices[verticesIndex + 1] = {static_cast<uint16_t>(packedInfo + 0b110), xyz, uv};
-//     vertices[verticesIndex + 2] = {static_cast<uint16_t>(packedInfo + 0b100), xyz, uv};
-//     vertices[verticesIndex + 3] = {static_cast<uint16_t>(packedInfo + 0b010), xyz, uv};
-// }
+UnfinishedVertex WorldView::getUnfinishedVertex(CellLoc &const loc, Cell &const cell) {
+    auto xyz = glm::i16vec3(loc.xyz());
+    auto uv = glm::i16vec2(loc.uv());
 
-Vertex UnfinishedVertex::toVertex(int spRest) {
-    return {static_cast<uint16_t>(sp + spRest), xyz, uv};
-};
-
-int WorldView::getVertexLocationForSideAndAllocateRoomInVertices(CellLoc cellLoc) {
-    ChunkIndex chunkIndex = Chunk::chunkIndexForCellLoc(cellLoc);
-    std::shared_ptr<GeometryChunk> chunk = chunks[chunkIndex];
-
-    size_t verticesIndex = chunk->vertices.size();
-
-    if (chunk->emptySideSlotIndices.size() > 0) {
-        verticesIndex = chunk->emptySideSlotIndices.back();
-        chunk->emptySideSlotIndices.pop_back();
-    } else {
-        chunk->vertices.resize(verticesIndex + 4, {});
-    }
-}
-
-UnfinishedVertex WorldView::getUnfinishedVertexForSide(SideIndex sideIndex, Cell cellData) {
-
-    auto mat = cellData;
-    auto xyz = glm::i16vec3(sideIndex.cellLoc.xyz());
-    auto uv = glm::i16vec2(sideIndex.cellLoc.uv());
-
-    uint16_t sp = ((mat << 3) + sideIndex.side + 3) << 3;
+    uint16_t sp = (cell << 3);
 
     return {xyz, uv, sp};
 }
-// Needed to create side
-// * UnfinishedVertex
-// * SideLocation (VertexLocation)
 
-struct SideCreationData {
-    UnfinishedVertex unfinishedVertex;
-    std::vector<int> order;
-    SideIndex sideIndex;
-    int verticesIndex;
-};
+void WorldView::createPosXUSide(CellLoc &const loc, Cell &const cell) {
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    int sideSetupSuccessful = sideSetup(chunk, loc, cell);
+    if (!sideSetupSuccessful) {
+        return;
+    }
+    UnfinishedVertex unfinishedVertex = getUnfinishedVertex(loc, cell);
 
-void WorldView::createSide(CellLoc loc, int side, Cell cell) {
-
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_XU, 0b100));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_XU, 0b111));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_XU, 0b101));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_XU, 0b110));
 }
 
-void WorldView::createPosXUSide(CellLoc loc, Cell cellData) {
-    std::unique_ptr<SideCreationData> sideCreationData = {};
-    sideCreationData->sideIndex = {loc, POS_XU};
-    sideCreationData->verticesIndex = getVertexLocation(sideCreationData);
-    allocateRoomInVertices(sideCreationData);
+void WorldView::createPosZVSide(CellLoc &const loc, Cell &const cell) {
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    int sideSetupSuccessful = sideSetup(chunk, loc, cell);
+    if (!sideSetupSuccessful) {
+        return;
+    }
+    UnfinishedVertex unfinishedVertex = getUnfinishedVertex(loc, cell);
 
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_ZV, 0b001));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_ZV, 0b111));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_ZV, 0b011));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_ZV, 0b101));
+}
 
+void WorldView::createPosYSide(CellLoc &const loc, Cell &const cell) {
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    int sideSetupSuccessful = sideSetup(chunk, loc, cell);
+    if (!sideSetupSuccessful) {
+        return;
+    }
+    UnfinishedVertex unfinishedVertex = getUnfinishedVertex(loc, cell);
+
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_Y, 0b010));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_Y, 0b111));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_Y, 0b110));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(POS_Y, 0b011));
+}
+
+void WorldView::createNegXUSide(CellLoc &const loc, Cell &const cell) {
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    int sideSetupSuccessful = sideSetup(chunk, loc, cell);
+    if (!sideSetupSuccessful) {
+        return;
+    }
+    UnfinishedVertex unfinishedVertex = getUnfinishedVertex(loc, cell);
+
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_XU, 0b000));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_XU, 0b011));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_XU, 0b010));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_XU, 0b001));
+}
+
+void WorldView::createNegZVSide(CellLoc &const loc, Cell &const cell) {
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    int sideSetupSuccessful = sideSetup(chunk, loc, cell);
+    if (!sideSetupSuccessful) {
+        return;
+    }
+    UnfinishedVertex unfinishedVertex = getUnfinishedVertex(loc, cell);
+
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_ZV, 0b000));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_ZV, 0b110));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_ZV, 0b100));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_ZV, 0b010));
+}
+
+void WorldView::createNegYSide(CellLoc &const loc, Cell &const cell) {
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    int sideSetupSuccessful = sideSetup(chunk, loc, cell);
+    if (!sideSetupSuccessful) {
+        return;
+    }
+    UnfinishedVertex unfinishedVertex = getUnfinishedVertex(loc, cell);
+
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_Y, 0b000));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_Y, 0b101));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_Y, 0b001));
+    chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_Y, 0b100));
+}
+
+Vertex UnfinishedVertex::toVertex(int side, int corner) {
+    return {static_cast<uint16_t>(sp + (side + 3) << 3) + corner, xyz, uv};
+};
+
+int WorldView::sideSetup(std::shared_ptr<GeometryChunk> &const chunk, CellLoc & const loc, Cell & const cell) {
     ChunkIndex chunkIndex = Chunk::chunkIndexForCellLoc(loc);
     std::shared_ptr<GeometryChunk> chunk = chunks[chunkIndex];
     RelativeCellLoc relCellLoc = Chunk::relativeCellLocForCellLoc(loc);
-    SideIndex sideIndex = {relCellLoc, POS_XU};
+
+    SideIndex sideIndex = {loc, POS_XU};
 
     bool sideIsDuplicate = chunk->sideIndices.count(sideIndex);
     if (sideIsDuplicate) {
-        return;
+        return 0;
     }
 
-    int verticesIndex = getVertexLocationForSideAndAllocateRoomInVertices(loc);
-    UnfinishedVertex unfinishedVetex = getUnfinishedVertexForSide(sideIndex, cellData);
+    chunk->vertices.reserve(4);
 
-    chunk->vertices[verticesIndex + 0] = unfinishedVetex.toVertex(0b000);
-    chunk->vertices[verticesIndex + 1] = unfinishedVetex.toVertex(0b110);
-    chunk->vertices[verticesIndex + 2] = unfinishedVetex.toVertex(0b100);
-    chunk->vertices[verticesIndex + 3] = unfinishedVetex.toVertex(0b010);
+    auto verticesStartIndex = chunk->vertices.size();
 
-    chunk->changedVertices.push_back(verticesIndex);
+    chunk->changedVertices.push_back(verticesStartIndex);
 
-    chunk->sideIndices[sideIndex] = verticesIndex;
+    chunk->sideIndices[sideIndex] = verticesStartIndex;
 
-}
-
-void WorldView::createPosZVSide(CellLoc loc, Cell cellData) {
-}
-
-void WorldView::createPosYSide(CellLoc loc, Cell cellData) {
-}
-
-void WorldView::createNegXUSide(CellLoc loc, Cell cellData) {
-}
-
-void WorldView::createNegZVSide(CellLoc loc, Cell cellData) {
-}
-
-void WorldView::createNegYSide(CellLoc loc, Cell cellData) {
+    return 1;
 }
 
 void WorldView::removeSide(CellLoc loc, int side) {
