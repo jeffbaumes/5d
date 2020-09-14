@@ -5,6 +5,7 @@
 typedef uint64_t Cell;
 typedef vector5<int> ivec5;
 typedef vector5<float> vec5;
+// typedef std::array<int, 6> SideIndex;
 
 vec5 normalize(vec5 a);
 vec5 project(vec5 a, vec5 b);
@@ -29,3 +30,31 @@ struct hash<ChunkIndex> {
     }
 };
 }
+
+struct SurroundingCells {
+    Cell cell;
+    CellLoc loc;
+
+    CellWithLoc negativeX;
+    CellWithLoc negativeU;
+    CellWithLoc negativeZ;
+    CellWithLoc negativeV;
+    CellWithLoc negativeY;
+
+    CellWithLoc positiveX;
+    CellWithLoc positiveU;
+    CellWithLoc positiveZ;
+    CellWithLoc positiveV;
+    CellWithLoc positiveY;
+
+    SurroundingCells(World &world, CellLoc loc);
+};
+
+struct CellWithLoc {
+    Cell cell;
+    CellLoc loc;
+
+    CellWithLoc() = default;
+    CellWithLoc(Cell cell, CellLoc loc);
+    CellWithLoc(World &world, CellLoc loc);
+};
