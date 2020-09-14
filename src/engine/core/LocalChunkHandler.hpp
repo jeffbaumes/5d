@@ -18,9 +18,9 @@ public:
 
     // WorldListener
     void setCell(World &world, CellLoc loc, Cell cell) override;
-    void updateEntity(Entity &entity, WorldPos pos) override;
-    void addChunk(Chunk &chunk) override;
-    void removeChunk(ChunkIndex chunkInd) override;
+    void updateEntity(World &world, Entity &entity, WorldPos pos) override;
+    void addChunk(World &world, Chunk &chunk) override;
+    void removeChunk(World &world, ChunkIndex chunkInd) override;
 
     // ChunkRequestHandler
     void requestChunk(ChunkIndex chunkInd) override;

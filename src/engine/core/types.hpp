@@ -30,31 +30,3 @@ struct hash<ChunkIndex> {
     }
 };
 }
-
-struct SurroundingCells {
-    Cell cell;
-    CellLoc loc;
-
-    CellWithLoc negativeX;
-    CellWithLoc negativeU;
-    CellWithLoc negativeZ;
-    CellWithLoc negativeV;
-    CellWithLoc negativeY;
-
-    CellWithLoc positiveX;
-    CellWithLoc positiveU;
-    CellWithLoc positiveZ;
-    CellWithLoc positiveV;
-    CellWithLoc positiveY;
-
-    SurroundingCells(World &world, CellLoc loc);
-};
-
-struct CellWithLoc {
-    Cell cell;
-    CellLoc loc;
-
-    CellWithLoc() = default;
-    CellWithLoc(Cell cell, CellLoc loc);
-    CellWithLoc(World &world, CellLoc loc);
-};

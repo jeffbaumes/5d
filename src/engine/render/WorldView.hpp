@@ -34,21 +34,53 @@ struct UnfinishedVertex {
 };
 
 struct SideIndex {
-    RelativeCellLoc cellLoc;
-    int side;
+    RelativeCellLoc cellLoc = {0, 0, 0, 0, 0};
+    int side = 0;
+
+    friend bool operator==(const SideIndex &a, const SideIndex &b) {
+        return a.cellLoc == b.cellLoc && a.side == b.side;
+    }
+};
+
+struct CellWithLoc {
+    Cell cell = 0;
+    CellLoc loc = {0, 0, 0, 0, 0};
+
+    CellWithLoc() = default;
+    CellWithLoc(Cell cell, CellLoc loc);
+    CellWithLoc(World &world, CellLoc loc);
+};
+
+struct SurroundingCells {
+    Cell cell;
+    CellLoc loc;
+
+    CellWithLoc negativeX;
+    CellWithLoc negativeU;
+    CellWithLoc negativeZ;
+    CellWithLoc negativeV;
+    CellWithLoc negativeY;
+
+    CellWithLoc positiveX;
+    CellWithLoc positiveU;
+    CellWithLoc positiveZ;
+    CellWithLoc positiveV;
+    CellWithLoc positiveY;
+
+    SurroundingCells(World &world, CellLoc loc);
 };
 
 namespace std {
 template <>
 struct hash<SideIndex> {
     size_t operator()(SideIndex const &sideIndex) const {
-        RelativeCellLoc cellLoc = sideIndex.cellLoc;
-        int side = sideIndex.side;
-        size_t h = cellLoc.x ^ (cellLoc.y << 1);
-        h = h ^ (cellLoc.z << 1);
-        h = h ^ (cellLoc.u << 1);
-        h = h ^ (cellLoc.v << 1);
-        h = h ^ (side << 1);
+        size_t h = sideIndex.cellLoc.x ^ (sideIndex.cellLoc.y << 1);
+        h = h ^ (sideIndex.cellLoc.z << 1);
+        h = h ^ (sideIndex.cellLoc.u << 1);
+        h = h ^ (sideIndex.cellLoc.v << 1);
+        h = h ^ (sideIndex.side << 1);
+        // std::cout << "Here" << h << std::endl
+        //           << std::flush;
         return h;
     }
 };
@@ -84,25 +116,18 @@ public:
     void setCameraViewAngle(float viewAngle);
     void setCameraUVView(float uvView);
 private:
-    void createSide(CellLoc & const loc, Cell & const cell, int side);
-    void createPosXUSide(CellLoc &const loc, Cell &const cell);
-    void createPosZVSide(CellLoc &const loc, Cell &const cell);
-    void createPosYSide(CellLoc &const loc, Cell &const cell);
-    void createNegXUSide(CellLoc &const loc, Cell &const cell);
-    void createNegZVSide(CellLoc &const loc, Cell &const cell);
-    void createNegYSide(CellLoc &const loc, Cell &const cell);
-    int sideSetup(std::shared_ptr<GeometryChunk> &const chunk, CellLoc &const loc, Cell &const cell);
-    UnfinishedVertex getUnfinishedVertex(CellLoc &const loc, Cell &const cell);
+    void createPosXUSide(const CellLoc &loc, const Cell &cell);
+    void createPosZVSide(const CellLoc &loc, const Cell &cell);
+    void createPosYSide(const CellLoc &loc, const Cell &cell);
+    void createNegXUSide(const CellLoc &loc, const Cell &cell);
+    void createNegZVSide(const CellLoc &loc, const Cell &cell);
+    void createNegYSide(const CellLoc &loc, const Cell &cell);
+    int sideSetup(const std::shared_ptr<GeometryChunk> &chunk, const CellLoc &loc, const Cell &cell);
+    UnfinishedVertex getUnfinishedVertex(const CellLoc &loc, const Cell &cell);
     // int getVertexLocationForSideAndAllocateRoomInVertices(CellLoc cellLoc);
     // void addSideVertices(std::vector<int> order, uint16_t packedInfo, glm::vec3 xyz, glm::vec2 uv);
 
     void removeSide(CellLoc loc, int side);
-    void removePosXUSide(CellLoc loc, Cell cellData);
-    void removePosZVSide(CellLoc loc, Cell cellData);
-    void removePosYSide(CellLoc loc, Cell cellData);
-    void removeNegXUSide(CellLoc loc, Cell cellData);
-    void removeNegZVSide(CellLoc loc, Cell cellData);
-    void removeNegYSide(CellLoc loc, Cell cellData);
     
     void visibleChunkIndices(std::set<ChunkIndex> &chunkIndices);
     void updateUniforms(float timeDelta);

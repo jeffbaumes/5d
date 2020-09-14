@@ -2,6 +2,7 @@
 
 #include "../core/World.hpp"
 
+
 WorldView::WorldView(std::vector<const char *> extensions) : renderer(extensions) {
 
 }
@@ -31,7 +32,12 @@ void WorldView::initSurface(VkSurfaceKHR surface) {
 
 // TODO: Shrink
 void WorldView::setCell(World &world, CellLoc loc, Cell cell) {
-    SurroundingCells surroundingCells = SurroundingCells(world, loc);
+    SurroundingCells surroundingCells = SurroundingCells({world}, loc);
+    auto x = loc.x;
+    auto y = loc.y;
+    auto z = loc.z;
+    auto u = loc.u;
+    auto v = loc.v;
 
     if (cell == 0) {
         // deleteCellSidesAndAddOtherCellSides(loc);
@@ -76,8 +82,10 @@ void WorldView::setCell(World &world, CellLoc loc, Cell cell) {
             createNegZVSide(surroundingCells.positiveV.loc, surroundingCells.positiveV.cell);
         }
     } else {
+        // auto negXPosULoc = {};
+
         if (world.getCell({x - 1, y, z, u, v}) == 0 || world.getCell({x, y, z, u - 1, v}) == 0) {
-            createSide({x, y, z, u, v}, -1);
+            createNegXUSide(loc, cell);
         }
         if (world.getCell({x - 1, y, z, u, v}) != 0 && world.getCell({x - 1, y, z, u + 1, v}) != 0) {
             removeSide({x - 1, y, z, u, v}, 1);
@@ -87,7 +95,7 @@ void WorldView::setCell(World &world, CellLoc loc, Cell cell) {
         }
 
         if (world.getCell({x + 1, y, z, u, v}) == 0 || world.getCell({x, y, z, u + 1, v}) == 0) {
-            createSide({x, y, z, u, v}, 1);
+            createPosXUSide(loc, cell);
         }
         if (world.getCell({x + 1, y, z, u, v}) != 0 && world.getCell({x + 1, y, z, u - 1, v}) != 0) {
             removeSide({x + 1, y, z, u, v}, -1);
@@ -97,19 +105,19 @@ void WorldView::setCell(World &world, CellLoc loc, Cell cell) {
         }
 
         if (world.getCell({x, y - 1, z, u, v}) == 0) {
-            createSide({x, y, z, u, v}, -2);
+            createNegYSide(loc, cell);
         } else {
             removeSide({x, y - 1, z, u, v}, 2);
         }
 
         if (world.getCell({x, y + 1, z, u, v}) == 0) {
-            createSide({x, y, z, u, v}, 2);
+            createPosYSide(loc, cell);
         } else {
             removeSide({x, y + 1, z, u, v}, -2);
         }
 
         if (world.getCell({x, y, z - 1, u, v}) == 0 || world.getCell({x, y, z, u, v - 1}) == 0) {
-            createSide({x, y, z, u, v}, -3);
+            createNegZVSide(loc, cell);
         }
         if (world.getCell({x, y, z - 1, u, v}) != 0 && world.getCell({x, y, z - 1, u, v + 1}) != 0) {
             removeSide({x, y, z - 1, u, v}, 3);
@@ -119,7 +127,7 @@ void WorldView::setCell(World &world, CellLoc loc, Cell cell) {
         }
 
         if (world.getCell({x, y, z + 1, u, v}) == 0 || world.getCell({x, y, z, u, v + 1}) == 0) {
-            createSide({x, y, z, u, v}, 3);
+            createPosZVSide(loc, cell);
         }
         if (world.getCell({x, y, z + 1, u, v}) != 0 && world.getCell({x, y, z + 1, u, v - 1}) != 0) {
             removeSide({x, y, z + 1, u, v}, -3);
@@ -184,16 +192,16 @@ void WorldView::setCameraViewAngle(float viewAngle) {
 
 }
 
-UnfinishedVertex WorldView::getUnfinishedVertex(CellLoc &const loc, Cell &const cell) {
-    auto xyz = glm::i16vec3(loc.xyz());
-    auto uv = glm::i16vec2(loc.uv());
+UnfinishedVertex WorldView::getUnfinishedVertex(const CellLoc &loc, const Cell &cell) {
+    auto xyz = glm::i16vec3(loc.x, loc.y, loc.z);
+    auto uv = glm::i16vec2(loc.u, loc.v);
 
     uint16_t sp = (cell << 3);
 
     return {xyz, uv, sp};
 }
 
-void WorldView::createPosXUSide(CellLoc &const loc, Cell &const cell) {
+void WorldView::createPosXUSide(const CellLoc &loc, const Cell &cell) {
     auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
@@ -207,7 +215,7 @@ void WorldView::createPosXUSide(CellLoc &const loc, Cell &const cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_XU, 0b110));
 }
 
-void WorldView::createPosZVSide(CellLoc &const loc, Cell &const cell) {
+void WorldView::createPosZVSide(const CellLoc &loc, const Cell &cell) {
     auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
@@ -221,7 +229,7 @@ void WorldView::createPosZVSide(CellLoc &const loc, Cell &const cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_ZV, 0b101));
 }
 
-void WorldView::createPosYSide(CellLoc &const loc, Cell &const cell) {
+void WorldView::createPosYSide(const CellLoc &loc, const Cell &cell) {
     auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
@@ -235,7 +243,7 @@ void WorldView::createPosYSide(CellLoc &const loc, Cell &const cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_Y, 0b011));
 }
 
-void WorldView::createNegXUSide(CellLoc &const loc, Cell &const cell) {
+void WorldView::createNegXUSide(const CellLoc &loc, const Cell &cell) {
     auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
@@ -249,7 +257,7 @@ void WorldView::createNegXUSide(CellLoc &const loc, Cell &const cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_XU, 0b001));
 }
 
-void WorldView::createNegZVSide(CellLoc &const loc, Cell &const cell) {
+void WorldView::createNegZVSide(const CellLoc &loc, const Cell &cell) {
     auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
@@ -263,7 +271,7 @@ void WorldView::createNegZVSide(CellLoc &const loc, Cell &const cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_ZV, 0b010));
 }
 
-void WorldView::createNegYSide(CellLoc &const loc, Cell &const cell) {
+void WorldView::createNegYSide(const CellLoc &loc, const Cell &cell) {
     auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
@@ -281,9 +289,7 @@ Vertex UnfinishedVertex::toVertex(int side, int corner) {
     return {static_cast<uint16_t>(sp + (side + 3) << 3) + corner, xyz, uv};
 };
 
-int WorldView::sideSetup(std::shared_ptr<GeometryChunk> &const chunk, CellLoc & const loc, Cell & const cell) {
-    ChunkIndex chunkIndex = Chunk::chunkIndexForCellLoc(loc);
-    std::shared_ptr<GeometryChunk> chunk = chunks[chunkIndex];
+int WorldView::sideSetup(const std::shared_ptr<GeometryChunk> &chunk, const CellLoc &loc, const Cell &cell) {
     RelativeCellLoc relCellLoc = Chunk::relativeCellLocForCellLoc(loc);
 
     SideIndex sideIndex = {loc, POS_XU};
@@ -305,26 +311,25 @@ int WorldView::sideSetup(std::shared_ptr<GeometryChunk> &const chunk, CellLoc & 
 }
 
 void WorldView::removeSide(CellLoc loc, int side) {
+    ChunkIndex chunkIndex = Chunk::chunkIndexForCellLoc(loc);
+    std::shared_ptr<GeometryChunk> chunk = chunks[chunkIndex];
 
-}
-
-void WorldView::removePosXUSide(CellLoc loc, Cell cellData) {
-
-}
-void WorldView::removePosZVSide(CellLoc loc, Cell cellData) {
-
-}
-void WorldView::removePosYSide(CellLoc loc, Cell cellData) {
-
-}
-void WorldView::removeNegXUSide(CellLoc loc, Cell cellData) {
-
-}
-void WorldView::removeNegZVSide(CellLoc loc, Cell cellData) {
-
-}
-void WorldView::removeNegYSide(CellLoc loc, Cell cellData) {
-
+    SideIndex sideIndex = {loc, side};
+    if (chunk->sideIndices.count(sideIndex)) {
+        auto verticesSize = chunk->vertices.size();
+        auto index = chunk->sideIndices[sideIndex];
+        for (size_t i = index; i < index + 4; i += 1) {
+            if (i < 4) {
+                chunk->vertices[i] = {0, {0, 0, 0}, {0, 0}};
+            } else {
+                chunk->vertices[i] = chunk->vertices[verticesSize - (i - index)];
+                chunk->vertices[verticesSize - (i - index)] = {0, {0, 0, 0}, {0, 0}};
+            }
+        }
+        chunk->sideIndices.erase(sideIndex);
+        chunk->changedVertices.push_back(index);
+        // chunk->changedVertices.push_back(verticesSize - index); // TODO: Might be needed to make sure there are never duplicate sides
+    }
 }
 
 void WorldView::visibleChunkIndices(std::set<ChunkIndex> &chunkIndices) {
@@ -359,4 +364,33 @@ void WorldView::updateUniforms(float timeDelta) {
     ubo.uvView = cameraUVViewTween;
 
     renderer.ubo = ubo;
+}
+
+SurroundingCells::SurroundingCells(World &world, CellLoc loc) {
+    int x = loc.x;
+    int y = loc.y;
+    int z = loc.z;
+    int u = loc.u;
+    int v = loc.v;
+
+    negativeX = CellWithLoc(world, {x - 1, y, z, u, v});
+    negativeU = CellWithLoc(world, {x, y, z, u - 1, v});
+    positiveX = CellWithLoc(world, {x + 1, y, z, u, v});
+    positiveU = CellWithLoc(world, {x, y, z, u + 1, v});
+    negativeZ = CellWithLoc(world, {x, y, z - 1, u, v});
+    negativeV = CellWithLoc(world, {x, y, z, u, v - 1});
+    positiveZ = CellWithLoc(world, {x, y, z + 1, u, v});
+    positiveV = CellWithLoc(world, {x, y, z, u, v + 1});
+    negativeY = CellWithLoc(world, {x, y - 1, z, u, v});
+    positiveY = CellWithLoc(world, {x, y + 1, z, u, v});
+}
+
+CellWithLoc::CellWithLoc(Cell cell, CellLoc loc) {
+    this->cell = cell;
+    this->loc = loc;
+}
+
+CellWithLoc::CellWithLoc(World &world, CellLoc loc) {
+    this->loc = loc;
+    this->cell = world.getCell(loc);
 }

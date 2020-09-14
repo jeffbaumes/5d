@@ -1,5 +1,6 @@
 
 set(VULKAN_SDK_PATH "" CACHE PATH "Vulkan SDK path (include up to vulkan/[architecture])")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 add_subdirectory(client/shaders)
 add_subdirectory(client/textures)

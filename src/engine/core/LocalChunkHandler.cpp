@@ -16,16 +16,16 @@ void LocalChunkHandler::setCell(World &world, CellLoc loc, Cell cell) {
     saveChunk(world.getChunk(chunkInd));
 }
 
-void LocalChunkHandler::updateEntity(Entity &entity, WorldPos pos) {
+void LocalChunkHandler::updateEntity(World &world, Entity &entity, WorldPos pos) {
     // Figure out how to save entities
     // ... and load entities
 }
 
-void LocalChunkHandler::addChunk(Chunk &chunk) {
+void LocalChunkHandler::addChunk(World &world, Chunk &chunk) {
     saveChunk(chunk);
 }
 
-void LocalChunkHandler::removeChunk(ChunkIndex chunkInd) {
+void LocalChunkHandler::removeChunk(World &world, ChunkIndex chunkInd) {
     // Nothing to do
 }
 
