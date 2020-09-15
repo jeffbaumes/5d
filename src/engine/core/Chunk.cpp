@@ -61,7 +61,7 @@ CellLoc Chunk::cellLocForRelativeCellLoc(RelativeCellLoc loc, ChunkIndex index) 
 }
 
 
-void Chunk::allocateCells() {
+Chunk::Chunk() {
     cells.resize(size.x * size.y * size.z * size.u * size.v, 0);
 }
 

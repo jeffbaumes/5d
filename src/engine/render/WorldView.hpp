@@ -122,24 +122,24 @@ private:
     void createNegXUSide(const CellLoc &loc, const Cell &cell);
     void createNegZVSide(const CellLoc &loc, const Cell &cell);
     void createNegYSide(const CellLoc &loc, const Cell &cell);
-    int sideSetup(const std::shared_ptr<GeometryChunk> &chunk, const CellLoc &loc, const Cell &cell);
+    int sideSetup(GeometryChunk *chunk, const CellLoc &loc, const Cell &cell);
     UnfinishedVertex getUnfinishedVertex(const CellLoc &loc, const Cell &cell);
     // int getVertexLocationForSideAndAllocateRoomInVertices(CellLoc cellLoc);
     // void addSideVertices(std::vector<int> order, uint16_t packedInfo, glm::vec3 xyz, glm::vec2 uv);
 
     void removeSide(CellLoc loc, int side);
-    
+
     void visibleChunkIndices(std::set<ChunkIndex> &chunkIndices);
     void updateUniforms(float timeDelta);
 
     float renderDistanceXZ = 20.0f;
     float renderDistanceUV = 10.0f;
-    WorldPos cameraPosition = {0, 0, 5, 0, 0};
-    WorldPos cameraLookAt = {1, 0, 5, 0, 0};
+    WorldPos cameraPosition = {2, 5, 2, 0, 0};
+    WorldPos cameraLookAt = {3, 0, 3, 0, 0};
     float cameraViewAngle = 45.0;
     float cameraUVView = 0.0f;
     float cameraUVViewTween = 0.0f;
     float tweenTime = 2.0f;
     VulkanRenderer renderer;
-    std::unordered_map<ChunkIndex, std::shared_ptr<GeometryChunk>> chunks;
+    std::unordered_map<ChunkIndex, std::unique_ptr<GeometryChunk>> chunks;
 };

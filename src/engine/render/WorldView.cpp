@@ -16,6 +16,7 @@ void WorldView::initSurface(VkSurfaceKHR surface) {
 
     std::vector<Vertex> vertices;
     vertices.resize(250 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v * 6 * 4, {0, {0, 0, 0}, {0, 0}});
+
     std::vector<uint32_t> indices;
     indices.resize(250 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v * 6 * 6, 0);
     for (size_t i = 0; i < indices.size(); i += 6) {
@@ -144,6 +145,7 @@ void WorldView::updateEntity(World &world, Entity &entity, WorldPos pos) {
 
 void WorldView::addChunk(World &world, Chunk &chunk) {
     std::cout << "Chunk added with x index " << chunk.index.x << std::endl;
+    chunks[chunk.index] = std::make_unique<GeometryChunk>();
     for (int x = 0; x < Chunk::size.x; x++) {
         for (int y = 0; y < Chunk::size.y; y++) {
             for (int z = 0; z < Chunk::size.z; z++) {
@@ -169,6 +171,12 @@ void WorldView::executeTask(World &world, float timeDelta) {
     world.ensureChunks(chunkIndices);
 
     updateUniforms(timeDelta);
+    for (const auto &chunk : chunks) {
+        if (chunk.second.get()) {
+            renderer.resetVertexRange(chunk.second->vertices, 0, 0, 0);
+        }
+    }
+
     renderer.draw();
 }
 
@@ -202,7 +210,7 @@ UnfinishedVertex WorldView::getUnfinishedVertex(const CellLoc &loc, const Cell &
 }
 
 void WorldView::createPosXUSide(const CellLoc &loc, const Cell &cell) {
-    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)].get();
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
         return;
@@ -216,7 +224,7 @@ void WorldView::createPosXUSide(const CellLoc &loc, const Cell &cell) {
 }
 
 void WorldView::createPosZVSide(const CellLoc &loc, const Cell &cell) {
-    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)].get();
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
         return;
@@ -230,7 +238,7 @@ void WorldView::createPosZVSide(const CellLoc &loc, const Cell &cell) {
 }
 
 void WorldView::createPosYSide(const CellLoc &loc, const Cell &cell) {
-    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)].get();
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
         return;
@@ -244,7 +252,7 @@ void WorldView::createPosYSide(const CellLoc &loc, const Cell &cell) {
 }
 
 void WorldView::createNegXUSide(const CellLoc &loc, const Cell &cell) {
-    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)].get();
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
         return;
@@ -258,7 +266,7 @@ void WorldView::createNegXUSide(const CellLoc &loc, const Cell &cell) {
 }
 
 void WorldView::createNegZVSide(const CellLoc &loc, const Cell &cell) {
-    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)].get();
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
         return;
@@ -272,7 +280,7 @@ void WorldView::createNegZVSide(const CellLoc &loc, const Cell &cell) {
 }
 
 void WorldView::createNegYSide(const CellLoc &loc, const Cell &cell) {
-    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)];
+    auto chunk = chunks[Chunk::chunkIndexForCellLoc(loc)].get();
     int sideSetupSuccessful = sideSetup(chunk, loc, cell);
     if (!sideSetupSuccessful) {
         return;
@@ -286,10 +294,14 @@ void WorldView::createNegYSide(const CellLoc &loc, const Cell &cell) {
 }
 
 Vertex UnfinishedVertex::toVertex(int side, int corner) {
-    return {static_cast<uint16_t>(sp + (side + 3) << 3) + corner, xyz, uv};
+    return { static_cast<uint16_t>(((sp + side + 3) << 3) + corner), xyz, uv };
 };
 
-int WorldView::sideSetup(const std::shared_ptr<GeometryChunk> &chunk, const CellLoc &loc, const Cell &cell) {
+int WorldView::sideSetup(GeometryChunk *chunk, const CellLoc &loc, const Cell &cell) {
+    if (!chunk) {
+        return 0;
+    }
+
     RelativeCellLoc relCellLoc = Chunk::relativeCellLocForCellLoc(loc);
 
     SideIndex sideIndex = {loc, POS_XU};
@@ -299,7 +311,7 @@ int WorldView::sideSetup(const std::shared_ptr<GeometryChunk> &chunk, const Cell
         return 0;
     }
 
-    chunk->vertices.reserve(4);
+    // chunk->vertices.reserve(4);
 
     auto verticesStartIndex = chunk->vertices.size();
 
@@ -312,20 +324,24 @@ int WorldView::sideSetup(const std::shared_ptr<GeometryChunk> &chunk, const Cell
 
 void WorldView::removeSide(CellLoc loc, int side) {
     ChunkIndex chunkIndex = Chunk::chunkIndexForCellLoc(loc);
-    std::shared_ptr<GeometryChunk> chunk = chunks[chunkIndex];
+    auto chunk = chunks[chunkIndex].get();
+    if (!chunk) {
+        return;
+    }
 
     SideIndex sideIndex = {loc, side};
     if (chunk->sideIndices.count(sideIndex)) {
         auto verticesSize = chunk->vertices.size();
         auto index = chunk->sideIndices[sideIndex];
-        for (size_t i = index; i < index + 4; i += 1) {
-            if (i < 4) {
-                chunk->vertices[i] = {0, {0, 0, 0}, {0, 0}};
-            } else {
-                chunk->vertices[i] = chunk->vertices[verticesSize - (i - index)];
-                chunk->vertices[verticesSize - (i - index)] = {0, {0, 0, 0}, {0, 0}};
-            }
-        }
+        // TODO: Fix this!
+        // for (size_t i = index; i < index + 4; i += 1) {
+        //     if (i < 4) {
+        //         chunk->vertices[i] = {0, {0, 0, 0}, {0, 0}};
+        //     } else {
+        //         chunk->vertices[i] = chunk->vertices[verticesSize - (i - index)];
+        //         chunk->vertices[verticesSize - (i - index)] = {0, {0, 0, 0}, {0, 0}};
+        //     }
+        // }
         chunk->sideIndices.erase(sideIndex);
         chunk->changedVertices.push_back(index);
         // chunk->changedVertices.push_back(verticesSize - index); // TODO: Might be needed to make sure there are never duplicate sides
@@ -346,7 +362,7 @@ void WorldView::updateUniforms(float timeDelta) {
         eye = glm::vec3(cameraPosition.u, cameraPosition.y, cameraPosition.v);
         look = glm::vec3(cameraLookAt.u, cameraLookAt.y, cameraLookAt.v);
     }
-    ubo.view = glm::lookAt(eye, eye + look, glm::vec3(0.0f, 1.0f, 0.0f));
+    ubo.view = glm::lookAt(eye, look, glm::vec3(0.0f, 1.0f, 0.0f));
     ubo.proj = glm::perspective(
         glm::radians(cameraViewAngle),
         renderer.swapChainExtent.width / (float)renderer.swapChainExtent.height,

@@ -15,7 +15,7 @@ struct Chunk {
     static ChunkIndex chunkIndexForCellLoc(CellLoc loc);
     static CellLoc cellLocForRelativeCellLoc(RelativeCellLoc loc, ChunkIndex index);
 
-    void allocateCells();
+    Chunk();
     void setCell(CellLoc loc, Cell cell);
     void setCell(RelativeCellLoc loc, Cell cell);
     Cell getCell(CellLoc loc);
