@@ -181,23 +181,31 @@ void WorldView::executeTask(World &world, float timeDelta) {
 }
 
 void WorldView::setRenderDistanceXZ(float distance) {
-
+    renderDistanceXZ = distance;
 }
 
 void WorldView::setRenderDistanceUV(float distance) {
-
+    renderDistanceUV = distance;
 }
 
 void WorldView::setCameraPosition(WorldPos pos) {
-
+    cameraPosition = pos;
 }
 
 void WorldView::setCameraLookAt(WorldPos pos) {
-
+    cameraLookAt = pos;
 }
 
 void WorldView::setCameraViewAngle(float viewAngle) {
+    cameraViewAngle = viewAngle;
+}
 
+void WorldView::setCameraUVView(float uvView) {
+    cameraUVView = uvView;
+}
+
+float WorldView::getCameraUVView() {
+    return cameraUVView;
 }
 
 UnfinishedVertex WorldView::getUnfinishedVertex(const CellLoc &loc, const Cell &cell) {

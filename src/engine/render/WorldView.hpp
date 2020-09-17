@@ -115,6 +115,7 @@ public:
     void setCameraLookAt(WorldPos pos);
     void setCameraViewAngle(float viewAngle);
     void setCameraUVView(float uvView);
+    float getCameraUVView();
 private:
     void createPosXUSide(const CellLoc &loc, const Cell &cell);
     void createPosZVSide(const CellLoc &loc, const Cell &cell);
@@ -134,8 +135,8 @@ private:
 
     float renderDistanceXZ = 20.0f;
     float renderDistanceUV = 10.0f;
-    WorldPos cameraPosition = {2, 5, 2, 0, 0};
-    WorldPos cameraLookAt = {3, 0, 3, 0, 0};
+    WorldPos cameraPosition = {2, 5, 2, 0.5, 0.5};
+    WorldPos cameraLookAt = {3, 0, 3, 0.5, 0.5};
     float cameraViewAngle = 45.0;
     float cameraUVView = 0.0f;
     float cameraUVViewTween = 0.0f;
