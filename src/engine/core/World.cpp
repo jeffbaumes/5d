@@ -47,10 +47,10 @@ void World::addChunk(std::unique_ptr<Chunk> chunk) {
 }
 
 void World::removeChunk(ChunkIndex chunkInd) {
-    // for (auto listener: listeners) {
-    //     listener->removeChunk(*this, chunkInd);
-    // }
-    // chunks.erase(chunkInd);
+    for (auto listener: listeners) {
+        listener->removeChunk(*this, chunkInd);
+    }
+    chunks.erase(chunkInd);
 }
 
 void World::ensureChunks(const std::unordered_set<ChunkIndex> &chunkInds) {

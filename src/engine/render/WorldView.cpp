@@ -169,7 +169,21 @@ void WorldView::addChunk(World &world, Chunk &chunk) {
 }
 
 void WorldView::removeChunk(World &world, ChunkIndex chunkInd) {
+    std::cout << "removeChunk " << chunkInd << std::endl;
+    auto chunk = chunks[chunkInd].get();
+    if (chunk) {
+        for (auto alloc : chunk->allocations) {
+            freeAllocations.push_back(alloc);
+        }
 
+        // Send zeroed out vertices to vulkan
+        for (size_t i = 0; i < chunk->vertices.size(); i += 1) {
+            chunk->vertices[i] = {};
+        }
+        updateChunkInRenderer(chunk);
+
+        chunks.erase(chunkInd);
+    }
 }
 
 void WorldView::executeTask(World &world, float timeDelta) {
