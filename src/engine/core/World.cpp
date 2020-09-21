@@ -23,7 +23,7 @@ Cell World::getCell(CellLoc loc) {
     if (chunkIter != chunks.end()) {
         return chunkIter->second->getCell(loc);
     }
-    return -1;
+    return 0;
 }
 
 void World::addEntity(std::unique_ptr<Entity> entity) {
@@ -47,13 +47,13 @@ void World::addChunk(std::unique_ptr<Chunk> chunk) {
 }
 
 void World::removeChunk(ChunkIndex chunkInd) {
-    for (auto listener: listeners) {
-        listener->removeChunk(*this, chunkInd);
-    }
-    chunks.erase(chunkInd);
+    // for (auto listener: listeners) {
+    //     listener->removeChunk(*this, chunkInd);
+    // }
+    // chunks.erase(chunkInd);
 }
 
-void World::ensureChunks(const std::set<ChunkIndex> &chunkInds) {
+void World::ensureChunks(const std::unordered_set<ChunkIndex> &chunkInds) {
     for (auto chunkInd: chunkInds) {
         if (chunks.find(chunkInd) == chunks.end()) {
             requestChunk(chunkInd);

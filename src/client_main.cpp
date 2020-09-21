@@ -149,7 +149,7 @@ public:
     bool removeCell = false;
     float height = 1.75f;
     float radius = 0.25f;
-    vec5 location = {2, 5, 2, 0.5, 0.5};
+    vec5 location = {2, 5, 2, 2.5, 2.5};
 
     WindowTask(GLFWwindow *appWindow, WorldView &worldView) : window(appWindow), view(worldView) {
         glfwSetWindowUserPointer(window, this);
@@ -173,6 +173,7 @@ public:
 
         updateLocation(world, timeDelta);
         updateFocusedCell(world);
+        view.setCameraUVView(uvViewTarget);
 
         if (glfwWindowShouldClose(window)) {
             world.stop();
@@ -352,11 +353,6 @@ int main(int argc, char *argv[]) {
         auto view = std::make_shared<WorldView>(getRequiredExtensions());
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         auto window = glfwCreateWindow(500, 500, "5d", nullptr, nullptr);
-        // glfwSetWindowUserPointer(window, this);
-        // glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-        // glfwSetKeyCallback(window, keyCallback);
-        // glfwSetMouseButtonCallback(window, mouseButtonCallback);
-        // glfwSetCursorPosCallback(window, cursorPositionCallback);
         VkSurfaceKHR surface;
         if (glfwCreateWindowSurface(view->getInstance(), window, nullptr, &surface) != VK_SUCCESS) {
             throw std::runtime_error("failed to create window surface!");

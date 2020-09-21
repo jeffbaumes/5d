@@ -1,6 +1,6 @@
 #pragma once
 
-#include <set>
+#include <unordered_set>
 #include <unordered_map>
 #include <vector>
 
@@ -88,13 +88,15 @@ struct hash<SideIndex> {
 
 struct GeometryChunk {
     std::vector<Vertex> vertices;
-    std::vector<size_t> emptySideSlotIndices;
     std::unordered_map<SideIndex, size_t> sideIndices;
-    std::vector<size_t> changedVertices;
+    std::vector<size_t> allocations;
+    bool modified;
 };
 
 class WorldView : public WorldListener, public WorldTask {
 public:
+    static size_t chunkAllocationSize;
+
     WorldView(std::vector<const char *> extensions);
 
     VkInstance getInstance();
@@ -117,20 +119,23 @@ public:
     void setCameraUVView(float uvView);
     float getCameraUVView();
 private:
+    void ensureAllocationsForChunk(GeometryChunk *geomChunk);
+    void updateChunkInRenderer(GeometryChunk *geomChunk);
     void createPosXUSide(const CellLoc &loc, const Cell &cell);
     void createPosZVSide(const CellLoc &loc, const Cell &cell);
     void createPosYSide(const CellLoc &loc, const Cell &cell);
     void createNegXUSide(const CellLoc &loc, const Cell &cell);
     void createNegZVSide(const CellLoc &loc, const Cell &cell);
     void createNegYSide(const CellLoc &loc, const Cell &cell);
-    int sideSetup(GeometryChunk *chunk, const CellLoc &loc, const Cell &cell);
+    int sideSetup(GeometryChunk *chunk, const CellLoc &loc, int side, const Cell &cell);
     UnfinishedVertex getUnfinishedVertex(const CellLoc &loc, const Cell &cell);
+    SideIndex sideIndexFromVertex(const Vertex &vertex);
     // int getVertexLocationForSideAndAllocateRoomInVertices(CellLoc cellLoc);
     // void addSideVertices(std::vector<int> order, uint16_t packedInfo, glm::vec3 xyz, glm::vec2 uv);
 
     void removeSide(CellLoc loc, int side);
 
-    void visibleChunkIndices(std::set<ChunkIndex> &chunkIndices);
+    void visibleChunkIndices(std::unordered_set<ChunkIndex> &chunkIndices);
     void updateUniforms(float timeDelta);
 
     float renderDistanceXZ = 20.0f;
@@ -143,4 +148,5 @@ private:
     float tweenTime = 2.0f;
     VulkanRenderer renderer;
     std::unordered_map<ChunkIndex, std::unique_ptr<GeometryChunk>> chunks;
+    std::vector<size_t> freeAllocations;
 };
