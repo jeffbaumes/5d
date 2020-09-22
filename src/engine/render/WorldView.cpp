@@ -16,10 +16,10 @@ void WorldView::initSurface(VkSurfaceKHR surface) {
     renderer.initSurface(surface);
 
     std::vector<Vertex> vertices;
-    vertices.resize(250 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v * 6 * 4, {0, {0, 0, 0}, {0, 0}});
+    vertices.resize(50 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v * 6 * 4, {0, {0, 0, 0}, {0, 0}});
 
     std::vector<uint32_t> indices;
-    indices.resize(250 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v * 6 * 6, 0);
+    indices.resize(50 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v * 6 * 6, 0);
     for (size_t i = 0; i < indices.size(); i += 6) {
         size_t v = i / 6 * 4;
         indices[i + 0] = v + 0;
@@ -150,6 +150,7 @@ void WorldView::updateEntity(World &world, Entity &entity, WorldPos pos) {
 }
 
 void WorldView::addChunk(World &world, Chunk &chunk) {
+    std::cout << "addChunk " << chunk.index << std::endl;
     auto geomChunk = std::make_unique<GeometryChunk>();
     geomChunk->modified = true;
     chunks[chunk.index] = std::move(geomChunk);
@@ -179,6 +180,10 @@ void WorldView::removeChunk(World &world, ChunkIndex chunkInd) {
         // Send zeroed out vertices to vulkan
         for (size_t i = 0; i < chunk->vertices.size(); i += 1) {
             chunk->vertices[i] = {};
+        }
+        // Make sure we have a full allocation
+        while (chunk->vertices.size() % chunkAllocationSize != 0) {
+            chunk->vertices.push_back({});
         }
         updateChunkInRenderer(chunk);
 

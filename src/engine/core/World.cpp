@@ -59,10 +59,14 @@ void World::ensureChunks(const std::unordered_set<ChunkIndex> &chunkInds) {
             requestChunk(chunkInd);
         }
     }
+    std::vector<ChunkIndex> toRemove;
     for (const auto &chunkIter: chunks) {
         if (chunkInds.find(chunkIter.first) == chunkInds.end()) {
-            removeChunk(chunkIter.first);
+            toRemove.push_back(chunkIter.first);
         }
+    }
+    for (auto chunkIndex : toRemove) {
+        removeChunk(chunkIndex);
     }
 }
 

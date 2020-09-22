@@ -10,6 +10,9 @@ void FlatChunkGenerator::fillChunk(Chunk &chunk) {
                         Cell cell = 0;
                         if (y == 0) {
                             cell = 1;
+                            if (x == 0 && z == 0) {
+                                cell = 0;
+                            }
                         }
                         chunk.setCell(loc, cell);
                     }

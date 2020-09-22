@@ -257,7 +257,7 @@ public:
         }
 
         view.setCameraPosition(worldPosFromVec5(location));
-        std::cout << "loc:  " << location.x << "," << location.y << "," << location.z << "," << location.u << "," << location.v << std::endl;
+        // std::cout << "loc:  " << location.x << "," << location.y << "," << location.z << "," << location.u << "," << location.v << std::endl;
 
         glm::vec3 look = lookDir();
         vec5 lookAt = location;
@@ -270,7 +270,7 @@ public:
             lookAt.v += look.z;
         }
         view.setCameraLookAt(worldPosFromVec5(lookAt));
-        std::cout << "look: " << lookAt.x << "," << lookAt.y << "," << lookAt.z << "," << lookAt.u << "," << lookAt.v << std::endl;
+        // std::cout << "look: " << lookAt.x << "," << lookAt.y << "," << lookAt.z << "," << lookAt.u << "," << lookAt.v << std::endl;
     }
 
     void collide(World &world, float h, int x, int y, int z, int u, int v) {
