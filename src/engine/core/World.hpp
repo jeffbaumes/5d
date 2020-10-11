@@ -1,7 +1,8 @@
 #pragma once
 
-#include <unordered_map>
 #include <memory>
+#include <thread>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -21,7 +22,7 @@ public:
 
     void addEntity(std::unique_ptr<Entity> entity);
 
-    Chunk &getChunk(ChunkIndex chunkInd);
+    Chunk *getChunk(ChunkIndex chunkInd);
     void requestChunk(ChunkIndex chunkInd);
     void addChunk(std::unique_ptr<Chunk> chunk);
     void removeChunk(ChunkIndex chunkInd);
@@ -31,7 +32,7 @@ public:
     void addWorldTask(std::shared_ptr<WorldTask> task);
     void setChunkRequestHandler(std::shared_ptr<ChunkRequestHandler> handler);
 
-    void run();
+    std::thread &run();
     void stop();
 
     static CellLoc cellLocForWorldPos(WorldPos pos);
@@ -43,4 +44,5 @@ private:
     std::vector<std::shared_ptr<WorldTask> > tasks = {};
     std::shared_ptr<ChunkRequestHandler> chunkRequestHandler = {};
     bool stopped = false;
+    std::thread runThread;
 };

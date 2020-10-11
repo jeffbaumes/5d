@@ -3,6 +3,10 @@
 #include "vector5.hpp"
 
 typedef uint64_t Cell;
+
+const Cell UNLOADED = 0xffff;
+const Cell AIR = 0;
+
 typedef vector5<int> ivec5;
 typedef vector5<float> vec5;
 // typedef std::array<int, 6> SideIndex;

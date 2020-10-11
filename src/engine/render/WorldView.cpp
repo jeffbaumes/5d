@@ -1,8 +1,13 @@
 #include "WorldView.hpp"
 
 #include "../core/World.hpp"
+#include "WorldViewTask.hpp"
 
-size_t WorldView::chunkAllocationSize = 6 * 4 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v;
+#include <chrono>
+#include <thread>
+
+// size_t WorldView::chunkAllocationSize = 6 * 4 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v;
+size_t WorldView::chunkAllocationSize = 4 * (Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v / 4);
 
 WorldView::WorldView(std::vector<const char *> extensions) : renderer(extensions) {
 
@@ -15,11 +20,13 @@ VkInstance WorldView::getInstance() {
 void WorldView::initSurface(VkSurfaceKHR surface) {
     renderer.initSurface(surface);
 
+    std::cout << "Chunk allocation size " << chunkAllocationSize << std::endl;
+
     std::vector<Vertex> vertices;
-    vertices.resize(50 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v * 6 * 4, {0, {0, 0, 0}, {0, 0}});
+    vertices.resize(500 * chunkAllocationSize, {0, {0, 0, 0}, {0, 0}});
 
     std::vector<uint32_t> indices;
-    indices.resize(50 * Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v * 6 * 6, 0);
+    indices.resize(500 * chunkAllocationSize / 4 * 6, 0);
     for (size_t i = 0; i < indices.size(); i += 6) {
         size_t v = i / 6 * 4;
         indices[i + 0] = v + 0;
@@ -37,9 +44,13 @@ void WorldView::initSurface(VkSurfaceKHR surface) {
     }
 }
 
-// // TODO: Shrink
 void WorldView::setCell(World &world, CellLoc loc, Cell cell) {
-    SurroundingCells surroundingCells = SurroundingCells({world}, loc);
+    auto surroundingChunks = SurroundingChunks(world, loc);
+    setCell(surroundingChunks, loc, cell);
+}
+
+void WorldView::setCell(SurroundingChunks &surroundingChunks, CellLoc loc, Cell cell) {
+    SurroundingCells surroundingCells = SurroundingCells(surroundingChunks, loc);
     auto x = loc.x;
     auto y = loc.y;
     auto z = loc.z;
@@ -54,92 +65,100 @@ void WorldView::setCell(World &world, CellLoc loc, Cell cell) {
             }
         }
 
-        if (surroundingCells.negativeX.cell != AIR) {
-            createPosXUSide(surroundingCells.negativeX.loc, surroundingCells.negativeX.cell); // 1
+        if (surroundingCells.negativeX.cell != AIR && surroundingCells.negativeX.cell != UNLOADED) {
+        // if (surroundingCells.negativeX.cell != AIR) {
+            createPosXUSide(surroundingCells.negativeX.loc, surroundingCells.negativeX.cell);
         }
-        if (surroundingCells.negativeU.cell != AIR) {
-            createPosXUSide(surroundingCells.negativeU.loc, surroundingCells.negativeU.cell); // 1
-        }
-
-        if (surroundingCells.positiveX.cell != AIR) {
-            createNegXUSide(surroundingCells.positiveX.loc, surroundingCells.positiveX.cell); // -1
-        }
-        if (surroundingCells.positiveU.cell != AIR) {
-            createNegXUSide(surroundingCells.positiveU.loc, surroundingCells.positiveU.cell); // -1
+        if (surroundingCells.negativeU.cell != AIR && surroundingCells.negativeU.cell != UNLOADED) {
+        // if (surroundingCells.negativeU.cell != AIR) {
+            createPosXUSide(surroundingCells.negativeU.loc, surroundingCells.negativeU.cell);
         }
 
-        if (surroundingCells.negativeY.cell != AIR) {
+        if (surroundingCells.positiveX.cell != AIR && surroundingCells.positiveX.cell != UNLOADED) {
+        // if (surroundingCells.positiveX.cell != AIR) {
+            createNegXUSide(surroundingCells.positiveX.loc, surroundingCells.positiveX.cell);
+        }
+        if (surroundingCells.positiveU.cell != AIR && surroundingCells.positiveU.cell != UNLOADED) {
+        // if (surroundingCells.positiveU.cell != AIR) {
+            createNegXUSide(surroundingCells.positiveU.loc, surroundingCells.positiveU.cell);
+        }
+
+        if (surroundingCells.negativeY.cell != AIR && surroundingCells.negativeY.cell != UNLOADED) {
+        // if (surroundingCells.negativeY.cell != AIR) {
             createPosYSide(surroundingCells.negativeY.loc, surroundingCells.negativeY.cell);
         }
-        if (surroundingCells.positiveY.cell != AIR) {
+        if (surroundingCells.positiveY.cell != AIR && surroundingCells.positiveY.cell != UNLOADED) {
+        // if (surroundingCells.positiveY.cell != AIR) {
             createNegYSide(surroundingCells.positiveY.loc, surroundingCells.positiveY.cell);
         }
 
-        if (surroundingCells.negativeZ.cell != AIR) {
+        if (surroundingCells.negativeZ.cell != AIR && surroundingCells.negativeZ.cell != UNLOADED) {
+        // if (surroundingCells.negativeZ.cell != AIR) {
             createPosZVSide(surroundingCells.negativeZ.loc, surroundingCells.negativeZ.cell);
         }
-        if (surroundingCells.negativeV.cell != AIR) {
+        if (surroundingCells.negativeV.cell != AIR && surroundingCells.negativeV.cell != UNLOADED) {
+        // if (surroundingCells.negativeV.cell != AIR) {
             createPosZVSide(surroundingCells.negativeV.loc, surroundingCells.negativeV.cell);
         }
 
-        if (surroundingCells.positiveZ.cell != AIR) {
+        if (surroundingCells.positiveZ.cell != AIR && surroundingCells.positiveZ.cell != UNLOADED) {
+        // if (surroundingCells.positiveZ.cell != AIR) {
             createNegZVSide(surroundingCells.positiveZ.loc, surroundingCells.positiveZ.cell);
         }
-        if (surroundingCells.positiveV.cell != AIR) {
+        if (surroundingCells.positiveV.cell != AIR && surroundingCells.positiveV.cell != UNLOADED) {
+        // if (surroundingCells.positiveV.cell != AIR) {
             createNegZVSide(surroundingCells.positiveV.loc, surroundingCells.positiveV.cell);
         }
     } else {
-        // auto negXPosULoc = {};
-
-        if (world.getCell({x - 1, y, z, u, v}) == 0 || world.getCell({x, y, z, u - 1, v}) == 0) {
+        if (surroundingCells.negativeX.cell == AIR || surroundingCells.negativeU.cell == AIR) {
             createNegXUSide(loc, cell);
         }
-        if (world.getCell({x - 1, y, z, u, v}) != 0 && world.getCell({x - 1, y, z, u + 1, v}) != 0) {
+        if (surroundingCells.negativeX.cell != AIR && surroundingCells.negativeXpositiveU.cell != AIR) {
             removeSide({x - 1, y, z, u, v}, 1);
         }
-        if (world.getCell({x, y, z, u - 1, v}) != 0 && world.getCell({x + 1, y, z, u - 1, v}) != 0) {
+        if (surroundingCells.negativeU.cell != AIR && surroundingCells.positiveXnegativeU.cell != AIR) {
             removeSide({x, y, z, u - 1, v}, 1);
         }
 
-        if (world.getCell({x + 1, y, z, u, v}) == 0 || world.getCell({x, y, z, u + 1, v}) == 0) {
+        if (surroundingCells.positiveX.cell == AIR || surroundingCells.positiveU.cell == AIR) {
             createPosXUSide(loc, cell);
         }
-        if (world.getCell({x + 1, y, z, u, v}) != 0 && world.getCell({x + 1, y, z, u - 1, v}) != 0) {
+        if (surroundingCells.positiveX.cell != AIR && surroundingCells.positiveXnegativeU.cell != AIR) {
             removeSide({x + 1, y, z, u, v}, -1);
         }
-        if (world.getCell({x, y, z, u + 1, v}) != 0 && world.getCell({x - 1, y, z, u + 1, v}) != 0) {
+        if (surroundingCells.positiveU.cell != AIR && surroundingCells.negativeXpositiveU.cell != AIR) {
             removeSide({x, y, z, u + 1, v}, -1);
         }
 
-        if (world.getCell({x, y - 1, z, u, v}) == 0) {
+        if (surroundingCells.negativeY.cell == AIR) {
             createNegYSide(loc, cell);
         } else {
             removeSide({x, y - 1, z, u, v}, 2);
         }
 
-        if (world.getCell({x, y + 1, z, u, v}) == 0) {
+        if (surroundingCells.positiveY.cell == AIR) {
             createPosYSide(loc, cell);
         } else {
             removeSide({x, y + 1, z, u, v}, -2);
         }
 
-        if (world.getCell({x, y, z - 1, u, v}) == 0 || world.getCell({x, y, z, u, v - 1}) == 0) {
+        if (surroundingCells.negativeZ.cell == AIR || surroundingCells.negativeV.cell == AIR) {
             createNegZVSide(loc, cell);
         }
-        if (world.getCell({x, y, z - 1, u, v}) != 0 && world.getCell({x, y, z - 1, u, v + 1}) != 0) {
+        if (surroundingCells.negativeZ.cell != AIR && surroundingCells.negativeZpositiveV.cell != AIR) {
             removeSide({x, y, z - 1, u, v}, 3);
         }
-        if (world.getCell({x, y, z, u, v - 1}) != 0 && world.getCell({x, y, z + 1, u, v - 1}) != 0) {
+        if (surroundingCells.negativeV.cell != AIR && surroundingCells.positiveZnegativeV.cell != AIR) {
             removeSide({x, y, z, u, v - 1}, 3);
         }
 
-        if (world.getCell({x, y, z + 1, u, v}) == 0 || world.getCell({x, y, z, u, v + 1}) == 0) {
+        if (surroundingCells.positiveZ.cell == AIR || surroundingCells.positiveV.cell == AIR) {
             createPosZVSide(loc, cell);
         }
-        if (world.getCell({x, y, z + 1, u, v}) != 0 && world.getCell({x, y, z + 1, u, v - 1}) != 0) {
+        if (surroundingCells.positiveZ.cell != AIR && surroundingCells.positiveZnegativeV.cell != AIR) {
             removeSide({x, y, z + 1, u, v}, -3);
         }
-        if (world.getCell({x, y, z, u, v + 1}) != 0 && world.getCell({x, y, z - 1, u, v + 1}) != 0) {
+        if (surroundingCells.positiveV.cell != AIR && surroundingCells.negativeZpositiveV.cell != AIR) {
             removeSide({x, y, z, u, v + 1}, -3);
         }
     }
@@ -151,9 +170,12 @@ void WorldView::updateEntity(World &world, Entity &entity, WorldPos pos) {
 
 void WorldView::addChunk(World &world, Chunk &chunk) {
     std::cout << "addChunk " << chunk.index << std::endl;
+    auto t1 = std::chrono::high_resolution_clock::now();
     auto geomChunk = std::make_unique<GeometryChunk>();
     geomChunk->modified = true;
     chunks[chunk.index] = std::move(geomChunk);
+    auto surroundingChunks = SurroundingChunks(world, Chunk::cellLocForRelativeCellLoc({}, chunk.index));
+    initializingChunkGeometry = true;
     for (int x = 0; x < Chunk::size.x; x++) {
         for (int y = 0; y < Chunk::size.y; y++) {
             for (int z = 0; z < Chunk::size.z; z++) {
@@ -161,22 +183,27 @@ void WorldView::addChunk(World &world, Chunk &chunk) {
                     for (int v = 0; v < Chunk::size.v; v++) {
                         RelativeCellLoc rel = {x, y, z, u, v};
                         CellLoc loc = Chunk::cellLocForRelativeCellLoc(rel, chunk.index);
-                        setCell(world, loc, chunk.getCell(rel));
+                        setCell(surroundingChunks, loc, chunk.getCell(rel));
                     }
                 }
             }
         }
     }
+    initializingChunkGeometry = false;
+    auto t2 = std::chrono::high_resolution_clock::now();
+    float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+    std::cout << "WorldView::addChunk - " << dt << std::endl;
 }
 
 void WorldView::removeChunk(World &world, ChunkIndex chunkInd) {
     std::cout << "removeChunk " << chunkInd << std::endl;
+    auto t1 = std::chrono::high_resolution_clock::now();
     auto chunk = chunks[chunkInd].get();
     if (chunk) {
         for (auto alloc : chunk->allocations) {
             freeAllocations.push_back(alloc);
         }
-
+        auto t1 = std::chrono::high_resolution_clock::now();
         // Send zeroed out vertices to vulkan
         for (size_t i = 0; i < chunk->vertices.size(); i += 1) {
             chunk->vertices[i] = {};
@@ -185,10 +212,15 @@ void WorldView::removeChunk(World &world, ChunkIndex chunkInd) {
         while (chunk->vertices.size() % chunkAllocationSize != 0) {
             chunk->vertices.push_back({});
         }
+        auto t2 = std::chrono::high_resolution_clock::now();
+        float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+        std::cout << "WorldView::removeChunk fill - " << dt << std::endl;
         updateChunkInRenderer(chunk);
-
         chunks.erase(chunkInd);
     }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+    std::cout << "WorldView::removeChunk - " << dt << std::endl;
 }
 
 void WorldView::executeTask(World &world, float timeDelta) {
@@ -196,7 +228,6 @@ void WorldView::executeTask(World &world, float timeDelta) {
     visibleChunkIndices(chunkIndices);
     world.ensureChunks(chunkIndices);
 
-    updateUniforms(timeDelta);
     for (const auto &chunk : chunks) {
         if (chunk.second.get() && chunk.second->modified) {
             ensureAllocationsForChunk(chunk.second.get());
@@ -204,8 +235,10 @@ void WorldView::executeTask(World &world, float timeDelta) {
             chunk.second->modified = false;
         }
     }
+}
 
-    renderer.draw();
+void WorldView::addWorldViewTask(std::shared_ptr<WorldViewTask> task) {
+    tasks.push_back(task);
 }
 
 void WorldView::setRenderDistanceXZ(float distance) {
@@ -236,6 +269,37 @@ float WorldView::getCameraUVView() {
     return cameraUVView;
 }
 
+void WorldView::run() {
+    auto startTime = std::chrono::high_resolution_clock::now();
+    auto lastTime = startTime;
+    while (!stopped) {
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float timeDelta = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
+        lastTime = currentTime;
+        timeDelta = std::min(timeDelta, 0.1f);
+        for (auto task : tasks) {
+            auto t1 = std::chrono::high_resolution_clock::now();
+            task->executeTask(*this, timeDelta);
+            auto t2 = std::chrono::high_resolution_clock::now();
+            float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+            // std::cout << dt << std::endl;
+        }
+        auto t1 = std::chrono::high_resolution_clock::now();
+        rendererMutex.lock();
+        updateUniforms(timeDelta);
+        renderer.draw();
+        rendererMutex.unlock();
+        auto t2 = std::chrono::high_resolution_clock::now();
+        float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+        // std::cout << dt << std::endl;
+        // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+void WorldView::stop() {
+    stopped = true;
+}
+
 void WorldView::ensureAllocationsForChunk(GeometryChunk *geomChunk) {
     while (geomChunk->allocations.size() * WorldView::chunkAllocationSize < geomChunk->vertices.size()) {
         if (freeAllocations.size() == 0) {
@@ -251,7 +315,14 @@ void WorldView::updateChunkInRenderer(GeometryChunk *geomChunk) {
     for (size_t allocIndex = 0; allocIndex < geomChunk->allocations.size(); allocIndex += 1) {
         auto bufferOffset = geomChunk->allocations[allocIndex] * WorldView::chunkAllocationSize;
         auto arrayOffset = allocIndex * WorldView::chunkAllocationSize;
+        rendererMutex.lock();
+        // std::cout << "Sending in " << geomChunk->vertices.size() << " vertices" << std::endl;
+        auto t1 = std::chrono::high_resolution_clock::now();
         renderer.resetVertexRange(geomChunk->vertices, bufferOffset, WorldView::chunkAllocationSize, arrayOffset);
+        auto t2 = std::chrono::high_resolution_clock::now();
+        float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+        std::cout << "resetVertexRange - " << dt << std::endl;
+        rendererMutex.unlock();
     }
 }
 
@@ -276,6 +347,7 @@ void WorldView::createPosXUSide(const CellLoc &loc, const Cell &cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_XU, 0b111));
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_XU, 0b101));
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_XU, 0b110));
+    chunk->modified = true;
 }
 
 void WorldView::createPosZVSide(const CellLoc &loc, const Cell &cell) {
@@ -290,6 +362,7 @@ void WorldView::createPosZVSide(const CellLoc &loc, const Cell &cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_ZV, 0b111));
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_ZV, 0b011));
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_ZV, 0b101));
+    chunk->modified = true;
 }
 
 void WorldView::createPosYSide(const CellLoc &loc, const Cell &cell) {
@@ -304,6 +377,7 @@ void WorldView::createPosYSide(const CellLoc &loc, const Cell &cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_Y, 0b111));
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_Y, 0b110));
     chunk->vertices.push_back(unfinishedVertex.toVertex(POS_Y, 0b011));
+    chunk->modified = true;
 }
 
 void WorldView::createNegXUSide(const CellLoc &loc, const Cell &cell) {
@@ -318,6 +392,7 @@ void WorldView::createNegXUSide(const CellLoc &loc, const Cell &cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_XU, 0b011));
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_XU, 0b010));
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_XU, 0b001));
+    chunk->modified = true;
 }
 
 void WorldView::createNegZVSide(const CellLoc &loc, const Cell &cell) {
@@ -332,6 +407,7 @@ void WorldView::createNegZVSide(const CellLoc &loc, const Cell &cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_ZV, 0b110));
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_ZV, 0b100));
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_ZV, 0b010));
+    chunk->modified = true;
 }
 
 void WorldView::createNegYSide(const CellLoc &loc, const Cell &cell) {
@@ -346,6 +422,7 @@ void WorldView::createNegYSide(const CellLoc &loc, const Cell &cell) {
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_Y, 0b101));
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_Y, 0b001));
     chunk->vertices.push_back(unfinishedVertex.toVertex(NEG_Y, 0b100));
+    chunk->modified = true;
 }
 
 Vertex UnfinishedVertex::toVertex(int side, int corner) {
@@ -377,6 +454,10 @@ int WorldView::sideSetup(GeometryChunk *chunk, const CellLoc &loc, int side, con
 }
 
 void WorldView::removeSide(CellLoc loc, int side) {
+    // If we are initializing chunk geometry, we will never need to delete a side
+    if (initializingChunkGeometry) {
+        return;
+    }
     ChunkIndex chunkIndex = Chunk::chunkIndexForCellLoc(loc);
     auto chunk = chunks[chunkIndex].get();
     if (!chunk) {
@@ -410,12 +491,20 @@ void WorldView::removeSide(CellLoc loc, int side) {
 
 void WorldView::visibleChunkIndices(std::unordered_set<ChunkIndex> &chunkIndices) {
     auto chunkIndex = Chunk::chunkIndexForCellLoc(World::cellLocForWorldPos(cameraPosition));
-    for (int dx = -1; dx <= 1; dx += 1) {
-        for (int dz = -1; dz <= 1; dz += 1) {
-            auto curChunkIndex = chunkIndex;
-            curChunkIndex.x += dx;
-            curChunkIndex.z += dz;
-            chunkIndices.insert(curChunkIndex);
+    int uvSightDistance = 0;
+    int xzSightDistance = 5;
+    for (int dx = -xzSightDistance; dx <= xzSightDistance; dx += 1) {
+        for (int dz = -xzSightDistance; dz <= xzSightDistance; dz += 1) {
+            for (int du = -uvSightDistance; du <= uvSightDistance; du += 1) {
+                for (int dv = -uvSightDistance; dv <= uvSightDistance; dv += 1) {
+                    auto curChunkIndex = chunkIndex;
+                    curChunkIndex.x += dx;
+                    curChunkIndex.z += dz;
+                    curChunkIndex.u += du;
+                    curChunkIndex.v += dv;
+                    chunkIndices.insert(curChunkIndex);
+                }
+            }
         }
     }
 }
@@ -449,23 +538,43 @@ void WorldView::updateUniforms(float timeDelta) {
     renderer.ubo = ubo;
 }
 
-SurroundingCells::SurroundingCells(World &world, CellLoc loc) {
+SurroundingChunks::SurroundingChunks(World &world, CellLoc loc) {
+    auto ind = Chunk::chunkIndexForCellLoc(loc);
+    chunk = world.getChunk(ind);
+    negativeX = world.getChunk({ind.x - 1, ind.y, ind.z, ind.u, ind.v});
+    negativeY = world.getChunk({ind.x, ind.y - 1, ind.z, ind.u, ind.v});
+    negativeZ = world.getChunk({ind.x, ind.y, ind.z - 1, ind.u, ind.v});
+    negativeU = world.getChunk({ind.x, ind.y, ind.z, ind.u - 1, ind.v});
+    negativeV = world.getChunk({ind.x, ind.y, ind.z, ind.u, ind.v - 1});
+    positiveX = world.getChunk({ind.x + 1, ind.y, ind.z, ind.u, ind.v});
+    positiveY = world.getChunk({ind.x, ind.y + 1, ind.z, ind.u, ind.v});
+    positiveZ = world.getChunk({ind.x, ind.y, ind.z + 1, ind.u, ind.v});
+    positiveU = world.getChunk({ind.x, ind.y, ind.z, ind.u + 1, ind.v});
+    positiveV = world.getChunk({ind.x, ind.y, ind.z, ind.u, ind.v + 1});
+}
+
+SurroundingCells::SurroundingCells(SurroundingChunks &surroundingChunks, CellLoc loc) {
     int x = loc.x;
     int y = loc.y;
     int z = loc.z;
     int u = loc.u;
     int v = loc.v;
 
-    negativeX = CellWithLoc(world, {x - 1, y, z, u, v});
-    negativeU = CellWithLoc(world, {x, y, z, u - 1, v});
-    positiveX = CellWithLoc(world, {x + 1, y, z, u, v});
-    positiveU = CellWithLoc(world, {x, y, z, u + 1, v});
-    negativeZ = CellWithLoc(world, {x, y, z - 1, u, v});
-    negativeV = CellWithLoc(world, {x, y, z, u, v - 1});
-    positiveZ = CellWithLoc(world, {x, y, z + 1, u, v});
-    positiveV = CellWithLoc(world, {x, y, z, u, v + 1});
-    negativeY = CellWithLoc(world, {x, y - 1, z, u, v});
-    positiveY = CellWithLoc(world, {x, y + 1, z, u, v});
+    negativeX = CellWithLoc(surroundingChunks, {x - 1, y, z, u, v});
+    negativeU = CellWithLoc(surroundingChunks, {x, y, z, u - 1, v});
+    positiveX = CellWithLoc(surroundingChunks, {x + 1, y, z, u, v});
+    positiveU = CellWithLoc(surroundingChunks, {x, y, z, u + 1, v});
+    negativeZ = CellWithLoc(surroundingChunks, {x, y, z - 1, u, v});
+    negativeV = CellWithLoc(surroundingChunks, {x, y, z, u, v - 1});
+    positiveZ = CellWithLoc(surroundingChunks, {x, y, z + 1, u, v});
+    positiveV = CellWithLoc(surroundingChunks, {x, y, z, u, v + 1});
+    negativeY = CellWithLoc(surroundingChunks, {x, y - 1, z, u, v});
+    positiveY = CellWithLoc(surroundingChunks, {x, y + 1, z, u, v});
+
+    negativeXpositiveU = CellWithLoc(surroundingChunks, {x - 1, y, z, u + 1, v});
+    positiveXnegativeU = CellWithLoc(surroundingChunks, {x + 1, y, z, u - 1, v});
+    negativeZpositiveV = CellWithLoc(surroundingChunks, {x, y, z - 1, u, v + 1});
+    positiveZnegativeV = CellWithLoc(surroundingChunks, {x, y, z + 1, u, v - 1});
 }
 
 CellWithLoc::CellWithLoc(Cell cell, CellLoc loc) {
@@ -473,7 +582,8 @@ CellWithLoc::CellWithLoc(Cell cell, CellLoc loc) {
     this->loc = loc;
 }
 
-CellWithLoc::CellWithLoc(World &world, CellLoc loc) {
+CellWithLoc::CellWithLoc(SurroundingChunks &surroundingChunks, CellLoc loc) {
     this->loc = loc;
-    this->cell = world.getCell(loc);
+    auto relativeLoc = Chunk::relativeCellLocForCellLoc(loc);
+    this->cell = surroundingChunks.chunk->getCell(relativeLoc);
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
@@ -11,10 +12,7 @@
 
 class Entity;
 class World;
-
-enum CELLTYPE {
-    AIR,
-};
+class WorldViewTask;
 
 enum SIDE {
     POS_XU = 1,
@@ -42,13 +40,15 @@ struct SideIndex {
     }
 };
 
+struct SurroundingChunks;
+
 struct CellWithLoc {
     Cell cell = 0;
     CellLoc loc = {0, 0, 0, 0, 0};
 
     CellWithLoc() = default;
     CellWithLoc(Cell cell, CellLoc loc);
-    CellWithLoc(World &world, CellLoc loc);
+    CellWithLoc(SurroundingChunks &surroundingChunks, CellLoc loc);
 };
 
 struct SurroundingCells {
@@ -67,7 +67,30 @@ struct SurroundingCells {
     CellWithLoc positiveV;
     CellWithLoc positiveY;
 
-    SurroundingCells(World &world, CellLoc loc);
+    CellWithLoc negativeXpositiveU;
+    CellWithLoc positiveXnegativeU;
+    CellWithLoc negativeZpositiveV;
+    CellWithLoc positiveZnegativeV;
+
+    SurroundingCells(SurroundingChunks &chunks, CellLoc loc);
+};
+
+struct SurroundingChunks {
+    Chunk *chunk;
+
+    Chunk *negativeX;
+    Chunk *negativeU;
+    Chunk *negativeZ;
+    Chunk *negativeV;
+    Chunk *negativeY;
+
+    Chunk *positiveX;
+    Chunk *positiveU;
+    Chunk *positiveZ;
+    Chunk *positiveV;
+    Chunk *positiveY;
+
+    SurroundingChunks(World &world, CellLoc loc);
 };
 
 namespace std {
@@ -111,6 +134,7 @@ public:
     // WorldTask
     void executeTask(World &world, float timeDelta) override;
 
+    void addWorldViewTask(std::shared_ptr<WorldViewTask> task);
     void setRenderDistanceXZ(float distance);
     void setRenderDistanceUV(float distance);
     void setCameraPosition(WorldPos pos);
@@ -118,7 +142,12 @@ public:
     void setCameraViewAngle(float viewAngle);
     void setCameraUVView(float uvView);
     float getCameraUVView();
+
+    void run();
+    void stop();
+
 private:
+    void setCell(SurroundingChunks &surroundingChunks, CellLoc loc, Cell cell);
     void ensureAllocationsForChunk(GeometryChunk *geomChunk);
     void updateChunkInRenderer(GeometryChunk *geomChunk);
     void createPosXUSide(const CellLoc &loc, const Cell &cell);
@@ -138,7 +167,7 @@ private:
     void visibleChunkIndices(std::unordered_set<ChunkIndex> &chunkIndices);
     void updateUniforms(float timeDelta);
 
-    float renderDistanceXZ = 20.0f;
+    float renderDistanceXZ = 500.0f;
     float renderDistanceUV = 10.0f;
     WorldPos cameraPosition = {2, 5, 2, 0.5, 0.5};
     WorldPos cameraLookAt = {3, 0, 3, 0.5, 0.5};
@@ -147,6 +176,10 @@ private:
     float cameraUVViewTween = 0.0f;
     float tweenTime = 2.0f;
     VulkanRenderer renderer;
+    std::mutex rendererMutex;
     std::unordered_map<ChunkIndex, std::unique_ptr<GeometryChunk>> chunks;
     std::vector<size_t> freeAllocations;
+    bool stopped = false;
+    std::vector<std::shared_ptr<WorldViewTask>> tasks = {};
+    bool initializingChunkGeometry = false;
 };

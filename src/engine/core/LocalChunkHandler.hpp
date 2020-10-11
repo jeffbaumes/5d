@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 #include <queue>
 
 #include "WorldListener.hpp"
@@ -28,9 +29,10 @@ public:
     std::unique_ptr<Chunk> retrieveChunk() override;
 
 private:
-    void saveChunk(const Chunk &chunk);
+    void saveChunk(Chunk *chunk);
 
     std::string worldDir;
     std::unique_ptr<ChunkGenerator> chunkGenerator;
     std::queue<std::unique_ptr<Chunk> > handledChunks;
+    std::mutex handledChunksMutex;
 };

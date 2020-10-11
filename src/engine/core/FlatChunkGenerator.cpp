@@ -7,13 +7,13 @@ void FlatChunkGenerator::fillChunk(Chunk &chunk) {
                 for (int u = 0; u < chunk.size.u; u += 1) {
                     for (int v = 0; v < chunk.size.v; v += 1) {
                         RelativeCellLoc loc {x, y, z, u, v};
-                        Cell cell = 0;
-                        if (y == 0) {
-                            cell = 1;
+                        Cell cell = 1;
+                        // if (y == 0) {
+                            // cell = 1;
                             if (x == 0 && z == 0) {
                                 cell = 0;
                             }
-                        }
+                        // }
                         chunk.setCell(loc, cell);
                     }
                 }

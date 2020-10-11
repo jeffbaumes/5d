@@ -11,6 +11,7 @@
 #include "engine/core/World.hpp"
 // #include "engine/network/WorldClient.hpp"
 #include "engine/render/WorldView.hpp"
+#include "engine/render/WorldViewTask.hpp"
 
 std::vector<const char *> getRequiredExtensions() {
     uint32_t glfwExtensionCount = 0;
@@ -23,9 +24,8 @@ std::vector<const char *> getRequiredExtensions() {
     return extensions;
 }
 
-class WindowTask : public WorldTask {
+class WindowTask : public WorldViewTask {
 public:
-
     static void framebufferResizeCallback(GLFWwindow *window, int width, int height) {
         auto app = reinterpret_cast<WindowTask *>(glfwGetWindowUserPointer(window));
         app->framebufferResized = true;
@@ -121,7 +121,7 @@ public:
     }
 
     GLFWwindow *window;
-    WorldView &view;
+    World &world;
     float forwardVel = 0.0f;
     float backVel = 0.0f;
     float leftVel = 0.0f;
@@ -129,10 +129,10 @@ public:
     float upVel = 0.0f;
     float downVel = 0.0f;
     float fallVel = 0.0f;
-    float walkVel = 2.0f;
+    float walkVel = 5.0f;
     float uvViewTarget = 0.0f;
     int buildMat = 1;
-    bool flying = false;
+    bool flying = true;
     bool holdingJump = false;
     bool inJump = false;
     bool uvTravel = false;
@@ -151,7 +151,7 @@ public:
     float radius = 0.25f;
     vec5 location = {2, 5, 2, 2.5, 2.5};
 
-    WindowTask(GLFWwindow *appWindow, WorldView &worldView) : window(appWindow), view(worldView) {
+    WindowTask(GLFWwindow *appWindow, World &appWorld) : window(appWindow), world(appWorld) {
         glfwSetWindowUserPointer(window, this);
         glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
         glfwSetKeyCallback(window, keyCallback);
@@ -159,7 +159,7 @@ public:
         glfwSetCursorPosCallback(window, cursorPositionCallback);
     }
 
-    void executeTask(World &world, float timeDelta) override {
+    void executeTask(WorldView &view, float timeDelta) override {
         glfwPollEvents();
 
         if (removeCell) {
@@ -171,12 +171,12 @@ public:
             setCell = false;
         }
 
-        updateLocation(world, timeDelta);
-        updateFocusedCell(world);
+        updateLocation(view, timeDelta);
+        updateFocusedCell(view);
         view.setCameraUVView(uvViewTarget);
 
         if (glfwWindowShouldClose(window)) {
-            world.stop();
+            view.stop();
         }
     }
 
@@ -208,7 +208,7 @@ public:
         return glm::rotate(glm::mat4(1.0f), glm::radians(lookAltitude - 90.0f), right) * glm::vec4(up, 1.0f);
     }
 
-    void updateLocation(World &world, float time) {
+    void updateLocation(WorldView &view, float time) {
         glm::vec3 up(0.0f, 1.0f, 0.0f);
         glm::vec3 right = glm::cross(lookHeading, up);
         vec5 feet = location;
@@ -257,7 +257,7 @@ public:
         }
 
         view.setCameraPosition(worldPosFromVec5(location));
-        // std::cout << "loc:  " << location.x << "," << location.y << "," << location.z << "," << location.u << "," << location.v << std::endl;
+        // std::cout << "location " << location << std::endl;
 
         glm::vec3 look = lookDir();
         vec5 lookAt = location;
@@ -303,7 +303,7 @@ public:
         }
     }
 
-    void updateFocusedCell(World &world) {
+    void updateFocusedCell(WorldView &view) {
         glm::vec3 look = lookDir();
         vec5 increment = {0.0, look.y, 0.0, 0.0, 0.0};
         if (view.getCameraUVView() < 0.5f) {
@@ -366,10 +366,13 @@ int main(int argc, char *argv[]) {
         world.addWorldListener(handler);
         world.setChunkRequestHandler(handler);
 
-        auto windowTask = std::make_shared<WindowTask>(window, *view);
-        world.addWorldTask(windowTask);
+        auto windowTask = std::make_shared<WindowTask>(window, world);
+        view->addWorldViewTask(windowTask);
 
-        world.run();
+        auto &worldThread = world.run();
+        view->run();
+        world.stop();
+        worldThread.join();
     } else {
         std::cout << "Usage:" << std::endl;
         std::cout << "  5d --server [server:port]" << std::endl;

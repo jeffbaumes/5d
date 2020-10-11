@@ -3,6 +3,8 @@
 #include "FlatChunkGenerator.hpp"
 #include "World.hpp"
 
+#include <thread>
+
 LocalChunkHandler::LocalChunkHandler(std::string dir) :
     worldDir(dir),
     chunkGenerator(std::move(std::make_unique<FlatChunkGenerator>())) { }
@@ -22,7 +24,7 @@ void LocalChunkHandler::updateEntity(World &world, Entity &entity, WorldPos pos)
 }
 
 void LocalChunkHandler::addChunk(World &world, Chunk &chunk) {
-    saveChunk(chunk);
+    saveChunk(&chunk);
 }
 
 void LocalChunkHandler::removeChunk(World &world, ChunkIndex chunkInd) {
@@ -30,22 +32,32 @@ void LocalChunkHandler::removeChunk(World &world, ChunkIndex chunkInd) {
 }
 
 void LocalChunkHandler::requestChunk(ChunkIndex chunkInd) {
-    auto chunk = std::make_unique<Chunk>();
-    chunk->index = chunkInd;
-    chunkGenerator->fillChunk(*chunk);
-    handledChunks.push(std::move(chunk));
+    std::thread thread([chunkInd](LocalChunkHandler *_this) {
+        auto chunk = std::make_unique<Chunk>();
+        chunk->index = chunkInd;
+        _this->chunkGenerator->fillChunk(*chunk);
+        _this->handledChunksMutex.lock();
+        _this->handledChunks.push(std::move(chunk));
+        _this->handledChunksMutex.unlock();
+    }, this);
+    thread.detach();
 }
 
 bool LocalChunkHandler::hasChunk() {
-    return !handledChunks.empty();
+    handledChunksMutex.lock();
+    bool empty = handledChunks.empty();
+    handledChunksMutex.unlock();
+    return !empty;
 }
 
 std::unique_ptr<Chunk> LocalChunkHandler::retrieveChunk() {
+    handledChunksMutex.lock();
     auto chunk = std::move(handledChunks.front());
     handledChunks.pop();
+    handledChunksMutex.unlock();
     return chunk;
 }
 
-void LocalChunkHandler::saveChunk(const Chunk &chunk) {
+void LocalChunkHandler::saveChunk(Chunk *chunk) {
     // TODO: Save chunk to file
 }
