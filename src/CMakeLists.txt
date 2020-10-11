@@ -1,5 +1,6 @@
 
 set(VULKAN_SDK_PATH "" CACHE PATH "Vulkan SDK path (include up to vulkan/[architecture])")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 add_subdirectory(client/shaders)
 add_subdirectory(client/textures)
@@ -44,3 +45,25 @@ target_link_libraries(5d
   ${GLFW_STATIC_LIBRARIES}
   vulkan
 )
+
+add_subdirectory(engine)
+
+add_executable(5d-client client_main.cpp)
+
+target_include_directories(5d-client
+  PUBLIC
+  ${GLFW_STATIC_INCLUDE_DIRS}
+)
+
+target_link_directories(5d-client
+  PUBLIC
+  ${GLFW_STATIC_LIBRARY_DIRS}
+)
+
+target_link_libraries(5d-client
+  5DCore
+  5DRender
+  ${GLFW_STATIC_LIBRARIES}
+  vulkan
+)
+

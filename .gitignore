@@ -11,3 +11,5 @@ build
 
 .env_vars
 
+CMakeCache.txt
+CMakeFiles
