@@ -49,14 +49,13 @@ struct vector5 {
     bool operator==(const vector5<T> &other) const {
         return x == other.x && y == other.y && z == other.z && u == other.u && v == other.v;
     }
-    bool operator<(const vector5<T> &other) const {
-        return x + y + z + u + v < other.x + other.y + other.z + other.u + other.v;
-    }
-    std::ostream &operator<<(std::ostream &os) {
-        os << "(" << x << "," << y << "," << z << "," << u << "," << v << ")";
-        return os;
-    }
 };
+
+template<typename T>
+std::ostream &operator<<(std::ostream &os, const vector5<T> &v) {
+    os << "(" << v.x << "," << v.y << "," << v.z << "," << v.u << "," << v.v << ")";
+    return os;
+}
 
 template <typename T>
 float dot(const vector5<T> &a, const vector5<T> &b) {

@@ -958,6 +958,10 @@ void VulkanRenderer::createVertexBuffer(const std::vector<Vertex> &vertices, boo
     // Make sure we don't go off the end of the vector
     size = std::min(size, vertices.size() - arrStart);
 
+    if (size == 0) {
+        return;
+    }
+
     VkDeviceSize bufferSize = sizeof(vertices[0]) * size;
     VkDeviceSize bufferOffset = sizeof(vertices[0]) * start;
 
@@ -974,7 +978,11 @@ void VulkanRenderer::createVertexBuffer(const std::vector<Vertex> &vertices, boo
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
     }
 
+    auto t1 = std::chrono::high_resolution_clock::now();
     copyBuffer(stagingBuffer, vertexBuffer, bufferOffset, bufferSize);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+    std::cout << "copyBuffer - " << dt << std::endl;
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
@@ -1148,8 +1156,11 @@ void VulkanRenderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevice
     copyRegion.dstOffset = dstOffset;
     copyRegion.size = size;
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
+    auto t1 = std::chrono::high_resolution_clock::now();
     endSingleTimeCommands(commandBuffer);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+    std::cout << "endSingleTimeCommands - " << dt << std::endl;
 }
 
 uint32_t VulkanRenderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
