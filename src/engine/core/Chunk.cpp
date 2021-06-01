@@ -1,7 +1,7 @@
 #include "Chunk.hpp"
 
 // ChunkSize Chunk::size = {4, 16, 4, 4, 4};
-ChunkSize Chunk::size = {16, 256, 16, 1, 1};
+ChunkSize Chunk::size = {16, 16, 16, 1, 1};
 // ChunkSize Chunk::size = {16, 16, 256, 1, 1};
 
 // RelativeCellLoc Chunk::relativeCellLocForCellLoc(CellLoc loc) {

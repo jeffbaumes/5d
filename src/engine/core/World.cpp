@@ -107,6 +107,7 @@ std::thread &World::run() {
             while (_this->chunkRequestHandler->hasChunk()) {
                 auto chunk = _this->chunkRequestHandler->retrieveChunk();
                 _this->addChunk(std::move(chunk));
+                std::cout << "Added Chunk" << std::endl;
             }
             auto currentTime = std::chrono::high_resolution_clock::now();
             float timeDelta = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();

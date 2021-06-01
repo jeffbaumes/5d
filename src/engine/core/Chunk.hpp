@@ -77,7 +77,6 @@ struct Chunk {
 
     ChunkIndex index = {};
 
-private:
     int cellIndexForRelativeCellLoc(RelativeCellLoc loc);
     std::vector<Cell> cells;
 };

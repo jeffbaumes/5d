@@ -12,3 +12,7 @@ target_include_directories(5DCore
   ${GLM_STATIC_INCLUDE_DIRS}
 )
 
+target_link_libraries(5DCore
+  PUBLIC
+  pthread
+)

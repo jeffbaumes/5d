@@ -10,7 +10,17 @@
 size_t WorldView::chunkAllocationSize = 4 * (Chunk::size.x * Chunk::size.y * Chunk::size.z * Chunk::size.u * Chunk::size.v / 4);
 
 WorldView::WorldView(std::vector<const char *> extensions) : renderer(extensions) {
+    currentChunkSideCounts.resize(
+        (Chunk::size.x) *
+        (Chunk::size.y) *
+        (Chunk::size.z) *
+        (Chunk::size.u) *
+        (Chunk::size.v) *
+        3,
+        0
+    );
 
+    emptyChunk.resize(chunkAllocationSize, {});
 }
 
 VkInstance WorldView::getInstance() {
@@ -168,22 +178,257 @@ void WorldView::updateEntity(World &world, Entity &entity, WorldPos pos) {
 
 }
 
+// void WorldView::addChunk(World &world, Chunk &chunk) {
+//     std::cout << "addChunk " << chunk.index << std::endl;
+//     auto t1 = std::chrono::high_resolution_clock::now();
+//     auto geomChunk = std::make_unique<GeometryChunk>();
+//     geomChunk->modified = true;
+//     chunks[chunk.index] = std::move(geomChunk);
+//     auto surroundingChunks = SurroundingChunks(world, Chunk::cellLocForRelativeCellLoc({}, chunk.index));
+//     initializingChunkGeometry = true;
+//     for (int x = 0; x < Chunk::size.x; x++) {
+//         for (int y = 0; y < Chunk::size.y; y++) {
+//             for (int z = 0; z < Chunk::size.z; z++) {
+//                 for (int u = 0; u < Chunk::size.u; u++) {
+//                     for (int v = 0; v < Chunk::size.v; v++) {
+//                         RelativeCellLoc rel = {x, y, z, u, v};
+//                         CellLoc loc = Chunk::cellLocForRelativeCellLoc(rel, chunk.index);
+//                         setCell(surroundingChunks, loc, chunk.getCell(rel));
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     initializingChunkGeometry = false;
+//     auto t2 = std::chrono::high_resolution_clock::now();
+//     float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+//     std::cout << "WorldView::addChunk - " << dt << std::endl;
+// }
+
+// void WorldView::addChunk(World &world, Chunk &chunk) {
+//     std::cout << "addChunk " << chunk.index << std::endl;
+//     auto t1 = std::chrono::high_resolution_clock::now();
+//     std::fill(currentChunkSides.begin(), currentChunkSides.end(), 0);
+//     auto geomChunk = std::make_unique<GeometryChunk>();
+//     geomChunk->modified = true;
+//     chunks[chunk.index] = std::move(geomChunk);
+//     auto surroundingChunks = SurroundingChunks(world, Chunk::cellLocForRelativeCellLoc({}, chunk.index));
+//     initializingChunkGeometry = true;
+//     int sx = Chunk::size.x;
+//     int sy = Chunk::size.y;
+//     int sz = Chunk::size.z;
+//     int su = Chunk::size.u;
+//     int sv = Chunk::size.v;
+//     size_t sideBitLoc = 7;
+
+//     for (int x = 1; x < sx + 1; x++) {
+//         for (int y = 1; y < sy + 1; y++) {
+//             for (int z = 1; z < sz + 1; z++) {
+//                 for (int u = 1; u < su + 1; u++) {
+//                     for (int v = 1; v < sv + 1; v++) {
+//                         int locWithoutSide =
+//                                     x * sy * sz * su * sv * 3 +
+//                                     y * sz * su * sv * 3 +
+//                                     z * su * sv * 3 +
+//                                     u * sv * 3 +
+//                                     v * 3;
+//                         for (int side = 0; side < 5; side++) {
+//                             Cell cellValue = chunk.getCell({x - 1, y - 1, z - 1, u - 1, v - 1});
+
+//                             if (cellValue != AIR && cellValue != UNLOADED) {
+//                                 int side3d = (side < 3 ? side : (side == 3 ? 0 : 2));
+//                                 int8_t currentSideValue = currentChunkSides[locWithoutSide + side3d];
+//                                 currentChunkSides[locWithoutSide + side3d] = (currentSideValue + 1) & ~(1UL << sideBitLoc);
+
+//                                 int prevSideLoc = (x - (side == 0 ? 1 : 0)) * sy * sz * su * sv * 3 +
+//                                                   (y - (side == 1 ? 1 : 0)) * sz * su * sv * 3 +
+//                                                   (z - (side == 2 ? 1 : 0)) * su * sv * 3 +
+//                                                   (u - (side == 3 ? 1 : 0)) * sv * 3 +
+//                                                   //   (u) * sv * 3 +
+//                                                   //   (v) * 3 +
+//                                                   (v - (side == 4 ? 1 : 0)) * 3 +
+//                                                   side3d;
+
+//                                 int8_t prevSideValue = currentChunkSides[prevSideLoc];
+
+//                                 currentChunkSides[prevSideLoc] = (prevSideValue + 1) | 1UL << sideBitLoc;
+//                                 // currentChunkSides[prevSideLoc] = (prevSideValue + 1) & ~(1UL << sideBitLoc);
+//                             }
+//                         }
+//                         //0 1 2 3 4 5
+//                         // | | | | | |
+//                         // 0 1 2 3 4 5
+//                         // RelativeCellLoc rel = {x, y, z, u, v};
+//                         // CellLoc loc = Chunk::cellLocForRelativeCellLoc(rel, chunk.index);
+//                         // setCell(surroundingChunks, loc, chunk.getCell(rel));
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     for (int x = 0; x < sx + 1; x++) {
+//         for (int y = 0; y < sy + 1; y++) {
+//             for (int z = 0; z < sz + 1; z++) {
+//                 for (int u = 0; u < su + 1; u++) {
+//                     for (int v = 0; v < sv + 1; v++) {
+//                         for (int sideBase = 0; sideBase < 5; sideBase++) {
+//                             int sideBase3d = (sideBase < 3 ? sideBase : (sideBase == 3 ? 0 : 2));
+//                             int8_t sidePacked = currentChunkSides[x * sy * sz * su * sv * 3 +
+//                                                                   y * sz * su * sv * 3 +
+//                                                                   z * su * sv * 3 +
+//                                                                   u * sv * 3 +
+//                                                                   v * 3 +
+//                                                                   sideBase3d];
+//                             bool backFront = (sidePacked >> sideBitLoc) & 1U;
+//                             int side = backFront ? -(sideBase3d + 1) : (sideBase3d + 1);
+//                             int8_t sides = sidePacked & ~(1UL << sideBitLoc);
+                            
+//                             if (sides == 1 || sides == 3) {
+//                                 RelativeCellLoc loc = {
+//                                     x - 1 + (backFront && sideBase == 0 ? 1 : 0),
+//                                     y - 1 + (backFront && sideBase == 1 ? 1 : 0),
+//                                     z - 1 + (backFront && sideBase == 2 ? 1 : 0),
+//                                     // z - 1,
+//                                     u - 1 + (backFront && sideBase == 3 ? 1 : 0),
+//                                     // u,
+//                                     v - 1 + (backFront && sideBase == 4 ? 1 : 0)};
+//                                 // v};
+//                                 Cell cellValue = chunk.getCell(loc);
+//                                 switch (side) {
+//                                     case POS_XU:
+//                                         createPosXUSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+//                                         break;
+//                                     case POS_Y:
+//                                         createPosYSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+//                                         break;
+//                                     case POS_ZV:
+//                                         createPosZVSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+//                                         break;
+//                                     case NEG_XU:
+//                                         createNegXUSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+//                                         break;
+//                                     case NEG_Y:
+//                                         createNegYSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+//                                         break;
+//                                     case NEG_ZV:
+//                                         createNegZVSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+//                                         break;
+//                                 }
+//                             }
+//                         }    
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     initializingChunkGeometry = false;
+//     auto t2 = std::chrono::high_resolution_clock::now();
+//     float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
+//     std::cout << "WorldView::addChunk - " << dt << std::endl;
+// }
+
 void WorldView::addChunk(World &world, Chunk &chunk) {
     std::cout << "addChunk " << chunk.index << std::endl;
     auto t1 = std::chrono::high_resolution_clock::now();
+    std::fill(currentChunkSideCounts.begin(), currentChunkSideCounts.end(), 0);
     auto geomChunk = std::make_unique<GeometryChunk>();
     geomChunk->modified = true;
     chunks[chunk.index] = std::move(geomChunk);
-    auto surroundingChunks = SurroundingChunks(world, Chunk::cellLocForRelativeCellLoc({}, chunk.index));
-    initializingChunkGeometry = true;
-    for (int x = 0; x < Chunk::size.x; x++) {
-        for (int y = 0; y < Chunk::size.y; y++) {
-            for (int z = 0; z < Chunk::size.z; z++) {
-                for (int u = 0; u < Chunk::size.u; u++) {
-                    for (int v = 0; v < Chunk::size.v; v++) {
-                        RelativeCellLoc rel = {x, y, z, u, v};
-                        CellLoc loc = Chunk::cellLocForRelativeCellLoc(rel, chunk.index);
-                        setCell(surroundingChunks, loc, chunk.getCell(rel));
+    int sx = Chunk::size.x;
+    int sy = Chunk::size.y;
+    int sz = Chunk::size.z;
+    int su = Chunk::size.u;
+    int sv = Chunk::size.v;
+    int xStride = sy * sz * su * sv;
+    int yStride = sz * su * sv;
+    int zStride = su * sv;
+    int uStride = sv;
+    int vStride = 1;
+    int allStrides = xStride + yStride + zStride + uStride + vStride;
+    size_t bitLoc = 5;
+    int zeroBit = ~(1UL << bitLoc);
+    int oneBit = (1UL << bitLoc);
+
+    for (int i = 0; i < chunk.cells.size(); i++) {
+        Cell mat = chunk.cells[i];
+        if (mat != AIR) {
+
+            currentChunkSideCounts[i * 3 + 0] = (currentChunkSideCounts[i * 3 + 0] + 1) & zeroBit;
+            currentChunkSideCounts[i * 3 + 1] = (currentChunkSideCounts[i * 3 + 1] + 1) & zeroBit;
+            currentChunkSideCounts[i * 3 + 2] = (currentChunkSideCounts[i * 3 + 2] + 1) & zeroBit;
+
+            currentChunkSideCounts[i * 3 + 0 + xStride] = (currentChunkSideCounts[i * 3 + 0 + xStride] + 1) | oneBit;
+            currentChunkSideCounts[i * 3 + 1 + yStride] = (currentChunkSideCounts[i * 3 + 1 + yStride] + 1) | oneBit;
+            currentChunkSideCounts[i * 3 + 2 + zStride] = (currentChunkSideCounts[i * 3 + 2 + zStride] + 1) | oneBit;
+            currentChunkSideCounts[i * 3 + 0 + uStride] = (currentChunkSideCounts[i * 3 + 0 + uStride] + 1) | oneBit;
+            currentChunkSideCounts[i * 3 + 2 + vStride] = (currentChunkSideCounts[i * 3 + 2 + vStride] + 1) | oneBit;
+            // std::cout << "Got " << static_cast<int>(currentChunkSideCounts[i * 3 + 2 + vStride]) << std::endl;
+        }
+    }
+
+    // int numOfSides = chunk.cells.size() * 3 - allStrides - 3;
+
+    // for (int i = 0; i < numOfSides; i++) {
+    //     int8_t packedSide = currentChunkSideCounts[i];
+    //     int8_t sides = packedSide & zeroBit;
+
+    //     if (sides == 1 || sides == 3) {
+    //         bool isForward = (packedSide >> bitLoc) & 1U;
+    //         int 
+    //     }
+    // }
+
+    for (int x = 0; x < sx; x++) {
+        for (int y = 0; y < sy; y++) {
+            for (int z = 0; z < sz; z++) {
+                for (int u = 0; u < su; u++) {
+                    for (int v = 0; v < sv; v++) {
+                        for (int sideBase = 0; sideBase < 5; sideBase++) {
+                            int sideBase3d = (sideBase < 3 ? sideBase : (sideBase == 3 ? 0 : 2));
+                            int8_t sidePacked = currentChunkSideCounts[x * xStride * 3 +
+                                                                       y * yStride * 3 +
+                                                                       z * zStride * 3 +
+                                                                       u * uStride * 3 +
+                                                                       v * vStride * 3 +
+                                                                       sideBase3d];
+                            bool isForward = (sidePacked >> bitLoc) & 1U;
+                            int side = isForward ? -(sideBase3d + 1) : (sideBase3d + 1);
+                            int8_t sides = sidePacked & ~(1UL << bitLoc);
+
+                            std::cout << "Got " << sides << std::endl;
+
+                            if (sides == 1 || sides == 3) {
+                                RelativeCellLoc loc = {
+                                    x - (isForward && sideBase == 0 ? 1 : 0),
+                                    y - (isForward && sideBase == 1 ? 1 : 0),
+                                    z - (isForward && sideBase == 2 ? 1 : 0),
+                                    u - (isForward && sideBase == 3 ? 1 : 0),
+                                    v - (isForward && sideBase == 4 ? 1 : 0)
+                                };
+                                Cell cellValue = chunk.getCell(loc);
+                                switch (side) {
+                                    case POS_XU:
+                                        createPosXUSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+                                        break;
+                                    case POS_Y:
+                                        createPosYSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+                                        break;
+                                    case POS_ZV:
+                                        createPosZVSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+                                        break;
+                                    case NEG_XU:
+                                        createNegXUSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+                                        break;
+                                    case NEG_Y:
+                                        createNegYSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+                                        break;
+                                    case NEG_ZV:
+                                        createNegZVSide(Chunk::cellLocForRelativeCellLoc(loc, chunk.index), cellValue);
+                                        break;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -230,6 +475,7 @@ void WorldView::executeTask(World &world, float timeDelta) {
 
     for (const auto &chunk : chunks) {
         if (chunk.second.get() && chunk.second->modified) {
+            std::cout << "in: " << chunk.second.get()->vertices.size() << std::endl;
             ensureAllocationsForChunk(chunk.second.get());
             updateChunkInRenderer(chunk.second.get());
             chunk.second->modified = false;
@@ -319,6 +565,11 @@ void WorldView::updateChunkInRenderer(GeometryChunk *geomChunk) {
         // std::cout << "Sending in " << geomChunk->vertices.size() << " vertices" << std::endl;
         auto t1 = std::chrono::high_resolution_clock::now();
         renderer.resetVertexRange(geomChunk->vertices, bufferOffset, WorldView::chunkAllocationSize, arrayOffset);
+        size_t stored = std::min(geomChunk->vertices.size() - arrayOffset, WorldView::chunkAllocationSize);
+        size_t left = chunkAllocationSize - stored;
+        if (left > 0) {
+            renderer.resetVertexRange(emptyChunk, bufferOffset + stored, left, 0);
+        }
         auto t2 = std::chrono::high_resolution_clock::now();
         float dt = std::chrono::duration<float, std::chrono::seconds::period>(t2 - t1).count();
         std::cout << "resetVertexRange - " << dt << std::endl;
@@ -440,7 +691,6 @@ int WorldView::sideSetup(GeometryChunk *chunk, const CellLoc &loc, int side, con
         return 0;
     }
 
-    RelativeCellLoc relCellLoc = Chunk::relativeCellLocForCellLoc(loc);
     SideIndex sideIndex = {loc, side};
 
     bool sideIsDuplicate = chunk->sideIndices.count(sideIndex);
@@ -490,9 +740,10 @@ void WorldView::removeSide(CellLoc loc, int side) {
 }
 
 void WorldView::visibleChunkIndices(std::unordered_set<ChunkIndex> &chunkIndices) {
-    auto chunkIndex = Chunk::chunkIndexForCellLoc(World::cellLocForWorldPos(cameraPosition));
+    // auto chunkIndex = Chunk::chunkIndexForCellLoc(World::cellLocForWorldPos(cameraPosition));
+    ChunkIndex chunkIndex = {0, 0, 0, 2, 2};
     int uvSightDistance = 0;
-    int xzSightDistance = 5;
+    int xzSightDistance = 1;
     for (int dx = -xzSightDistance; dx <= xzSightDistance; dx += 1) {
         for (int dz = -xzSightDistance; dz <= xzSightDistance; dz += 1) {
             for (int du = -uvSightDistance; du <= uvSightDistance; du += 1) {

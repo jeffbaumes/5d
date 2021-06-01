@@ -111,8 +111,8 @@ struct hash<SideIndex> {
 
 struct GeometryChunk {
     std::vector<Vertex> vertices;
-    std::unordered_map<SideIndex, size_t> sideIndices;
     std::vector<size_t> allocations;
+    std::unordered_map<SideIndex, size_t> sideIndices;
     bool modified;
 };
 
@@ -182,4 +182,6 @@ private:
     bool stopped = false;
     std::vector<std::shared_ptr<WorldViewTask>> tasks = {};
     bool initializingChunkGeometry = false;
+    std::vector<int8_t> currentChunkSideCounts;
+    std::vector<Vertex> emptyChunk;
 };
