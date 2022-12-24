@@ -1,5 +1,16 @@
 # 5d
 
+An experimental voxel game where you can move in two extra spatial dimensions.
+
+## Technologies
+* C++
+* Vulkan
+
+## Controls
+* WASD to move around, space to jump, left/right click to build/break
+* Hold shift while walking to walk in U/V coordinates instead of X/Z. Each block will scroll in the extra two dimensions
+* Press V to toggle your view between X/Z and U/V coordinates
+
 ## Development
 
 To clone:
